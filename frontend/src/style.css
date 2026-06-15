@@ -1,0 +1,296 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary-blue: #1660cf; /* Sleek, vibrant blue from the mockup */
+  --dark-bg: #18181c; /* Top bar background */
+  --text-primary: #121212;
+  --text-muted: #6c757d;
+  --transition-speed: 0.25s;
+}
+
+body {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header bar */
+.top-header {
+  background-color: var(--dark-bg);
+  color: #a0a0a5;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 24px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #2d2d34;
+  user-select: none;
+}
+
+/* Main Split Container */
+.login-container {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 44px);
+}
+
+/* Left panel (Blue info section) */
+.info-panel {
+  background-color: var(--primary-blue);
+  color: #ffffff;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8% 10%;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-speed) ease;
+}
+
+.info-content {
+  max-width: 480px;
+  z-index: 2;
+}
+
+.logo-wrapper {
+  margin-bottom: 2.5rem;
+}
+
+.logo-svg {
+  width: 110px;
+  height: 110px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.info-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 1.8rem;
+  letter-spacing: -0.02em;
+}
+
+.info-text {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+}
+
+.info-text .highlight {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  color: #ffffff;
+}
+
+/* Right panel (White form section) */
+.form-panel {
+  width: 50%;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 8% 10%;
+  transition: all var(--transition-speed) ease;
+}
+
+.form-content {
+  width: 100%;
+  max-width: 440px;
+}
+
+.brand-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 2.5rem;
+  letter-spacing: 0.02em;
+}
+
+.welcome-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #111111;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.welcome-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 2.5rem;
+}
+
+.welcome-subtitle .highlight {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--text-muted);
+  text-underline-offset: 3px;
+  color: #333333;
+}
+
+/* Form Styles & Floating Label Logic */
+.form-group-custom {
+  position: relative;
+  margin-bottom: 2.2rem;
+}
+
+/* Base input state (Normal font-weight, thin grey border) */
+.form-control-custom {
+  width: 100%;
+  border: none;
+  border-bottom: 1.5px solid #d1d5db;
+  border-radius: 0;
+  padding: 10px 0;
+  font-size: 1.05rem;
+  font-weight: 400; /* Normal weight by default */
+  color: var(--text-primary);
+  background-color: transparent;
+  transition: border-color var(--transition-speed), border-width 0.15s, font-weight var(--transition-speed);
+}
+
+/* Base label state (Normal font-weight, positioned inside input) */
+.form-label-custom {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  font-size: 1.05rem;
+  font-weight: 400; /* Normal weight by default */
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: all var(--transition-speed) ease;
+}
+
+/* Clicked/Focused or Filled states */
+
+/* 1. Underline becomes thick and black, text becomes bold */
+.form-control-custom:focus,
+.form-control-custom:not(:placeholder-shown) {
+  font-weight: 700; /* Bold input text */
+  border-bottom: 2.5px solid #000000; /* Thicker/black underline */
+  outline: none;
+}
+
+/* 2. Label floats up, becomes smaller, black, and bold */
+.form-control-custom:focus ~ .form-label-custom,
+.form-control-custom:not(:placeholder-shown) ~ .form-label-custom {
+  top: -14px;
+  font-size: 0.85rem;
+  color: #000000;
+  font-weight: 700; /* Bold label */
+}
+
+/* Submit Button */
+.btn-submit {
+  width: 100%;
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 14px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-submit:hover {
+  background-color: #222222;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-submit:active {
+  transform: scale(0.98);
+}
+
+.form-footer {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333333;
+}
+
+.form-footer a {
+  color: #000000;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color var(--transition-speed);
+}
+
+.form-footer a:hover {
+  color: var(--primary-blue);
+  text-decoration: underline;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Overrides */
+@media (max-width: 991px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+  }
+  #app {
+    height: auto;
+    min-height: 100vh;
+  }
+  .login-container {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 44px);
+  }
+  .info-panel, .form-panel {
+    width: 100%;
+    padding: 3.5rem 2rem;
+  }
+  .info-panel {
+    align-items: center;
+    text-align: center;
+  }
+  .logo-wrapper {
+    margin-bottom: 1.5rem;
+  }
+  .info-title {
+    font-size: 2.4rem;
+    margin-bottom: 1.2rem;
+  }
+  .welcome-title {
+    font-size: 2.2rem;
+  }
+  .form-content {
+    max-width: 100%;
+  }
+}
