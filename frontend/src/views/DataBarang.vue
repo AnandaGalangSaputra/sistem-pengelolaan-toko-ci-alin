@@ -102,6 +102,7 @@ const formRack = ref('')
 const formStock = ref(0)
 const formLimit = ref(5)
 const formPrice = ref(0)
+const formCost = ref(0)
 const formImage = ref('')
 
 const openAddModal = () => {
@@ -110,16 +111,25 @@ const openAddModal = () => {
   formStock.value = 0
   formLimit.value = 5
   formPrice.value = 0
+  formCost.value = 0
   formImage.value = ''
   showAddModal.value = true
 }
 
 const submitAdd = async () => {
-  if (!formName.value || !formRack.value || formPrice.value <= 0) {
-    alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
+  if (!formName.value || !formRack.value || formPrice.value <= 0 || formCost.value < 0) {
+    alert('Harap isi nama, lokasi rak, harga jual, dan harga beli barang dengan benar!')
     return
   }
-  const success = await addProduct(formName.value, formRack.value, formStock.value, formLimit.value, formPrice.value, formImage.value)
+  const success = await addProduct(
+    formName.value,
+    formRack.value,
+    formStock.value,
+    formLimit.value,
+    formPrice.value,
+    formCost.value,
+    formImage.value
+  )
   if (success) {
     showAddModal.value = false
     triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
@@ -133,14 +143,15 @@ const openEditModal = (product) => {
   formStock.value = product.stock
   formLimit.value = product.limit
   formPrice.value = product.price
+  formCost.value = product.harga_beli || 0
   formImage.value = product.image || ''
   showEditModal.value = true
 }
 
 const submitEdit = async () => {
   if (!selectedProd.value) return
-  if (!formName.value || !formRack.value || formPrice.value <= 0) {
-    alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
+  if (!formName.value || !formRack.value || formPrice.value <= 0 || formCost.value < 0) {
+    alert('Harap isi nama, lokasi rak, harga jual, dan harga beli barang dengan benar!')
     return
   }
 
@@ -150,6 +161,7 @@ const submitEdit = async () => {
     stock: Number(formStock.value),
     limit: Number(formLimit.value),
     price: Number(formPrice.value),
+    harga_beli: Number(formCost.value),
     image: formImage.value
   }
 
@@ -292,9 +304,14 @@ const onImageUpload = (event) => {
                 <h5 class="fw-bold text-dark mb-1 text-truncate-2" style="font-size: 0.95rem; line-height: 1.4; min-height: 2.8rem;">
                   {{ prod.name }}
                 </h5>
-                <h4 class="fw-bold text-primary mb-3.5" style="font-size: 1.25rem;">
-                  {{ formatRupiah(prod.price) }}
-                </h4>
+                <div class="d-flex align-items-baseline gap-2 mb-3.5">
+                  <h4 class="fw-bold text-primary mb-0" style="font-size: 1.25rem;">
+                    {{ formatRupiah(prod.price) }}
+                  </h4>
+                  <span class="text-muted small" style="font-size: 0.75rem;">
+                    Beli: {{ formatRupiah(prod.harga_beli) }}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -347,6 +364,7 @@ const onImageUpload = (event) => {
                 <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th>Lokasi Rak</th>
+              <th>Harga Beli</th>
               <th @click="toggleSort('price')" style="cursor: pointer; user-select: none;">
                 Harga Jual
                 <i class="bi ms-1" :class="sortBy.startsWith('price') ? (sortBy === 'price-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
@@ -373,6 +391,7 @@ const onImageUpload = (event) => {
                   <i class="bi bi-geo-alt-fill text-primary me-1"></i>{{ prod.rack }}
                 </span>
               </td>
+              <td class="text-secondary small">{{ formatRupiah(prod.harga_beli) }}</td>
               <td class="fw-bold text-dark">{{ formatRupiah(prod.price) }}</td>
               <td>{{ prod.stock }} unit</td>
               <td>
@@ -392,7 +411,7 @@ const onImageUpload = (event) => {
               </td>
             </tr>
             <tr v-if="filteredProducts.length === 0">
-              <td :colspan="state.currentUser?.role === 'owner' ? 7 : 6" class="text-center py-5 text-muted">
+              <td :colspan="state.currentUser?.role === 'owner' ? 8 : 7" class="text-center py-5 text-muted">
                 <i class="bi bi-search d-block fs-2 mb-2 text-secondary"></i>
                 <span>Tidak menemukan produk yang cocok dengan pencarian Anda.</span>
               </td>
@@ -458,11 +477,15 @@ const onImageUpload = (event) => {
             </div>
 
             <div class="row g-3 mb-3">
-              <div class="col-6">
+              <div class="col-4">
                 <label for="addRack" class="form-label-style">Lokasi Rak</label>
                 <input type="text" id="addRack" v-model="formRack" list="rackList" class="form-control-style" placeholder="Contoh: Rak B-3" />
               </div>
-              <div class="col-6">
+              <div class="col-4">
+                <label for="addCost" class="form-label-style">Harga Beli (Rp)</label>
+                <input type="number" id="addCost" v-model.number="formCost" class="form-control-style" placeholder="Contoh: 14000" />
+              </div>
+              <div class="col-4">
                 <label for="addPrice" class="form-label-style">Harga Jual (Rp)</label>
                 <input type="number" id="addPrice" v-model.number="formPrice" class="form-control-style" placeholder="Contoh: 18000" />
               </div>
@@ -520,11 +543,15 @@ const onImageUpload = (event) => {
             </div>
 
             <div class="row g-3 mb-3">
-              <div class="col-6">
+              <div class="col-4">
                 <label for="editRack" class="form-label-style">Lokasi Rak</label>
                 <input type="text" id="editRack" v-model="formRack" list="rackList" class="form-control-style" />
               </div>
-              <div class="col-6">
+              <div class="col-4">
+                <label for="editCost" class="form-label-style">Harga Beli (Rp)</label>
+                <input type="number" id="editCost" v-model.number="formCost" class="form-control-style" />
+              </div>
+              <div class="col-4">
                 <label for="editPrice" class="form-label-style">Harga Jual (Rp)</label>
                 <input type="number" id="editPrice" v-model.number="formPrice" class="form-control-style" />
               </div>

@@ -1,4 +1,4 @@
-<?php
+ q<?php
 
 namespace App\Http\Controllers;
 
@@ -55,6 +55,7 @@ class BarangController extends Controller
             'stock' => 'nullable|integer|min:0',
             'limit' => 'nullable|integer|min:0',
             'price' => 'required|numeric|min:0',
+            'harga_beli' => 'nullable|numeric|min:0',
             'image' => 'nullable|string',
         ]);
 
@@ -90,7 +91,7 @@ class BarangController extends Controller
         }
 
         $harga_jual = $request->price;
-        $harga_beli = $harga_jual * 0.8; // Default cost of goods sold
+        $harga_beli = $request->harga_beli ?? ($harga_jual * 0.8);
 
         $barang = Barang::create([
             'kode_barang' => $kode_barang,
@@ -140,6 +141,7 @@ class BarangController extends Controller
             'stock' => 'required|integer|min:0',
             'limit' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
+            'harga_beli' => 'nullable|numeric|min:0',
             'image' => 'nullable|string',
         ]);
 
@@ -163,10 +165,7 @@ class BarangController extends Controller
         }
 
         $harga_jual = $request->price;
-        $harga_beli = $barang->harga_beli;
-        if ($harga_beli > $harga_jual) {
-            $harga_beli = $harga_jual * 0.8;
-        }
+        $harga_beli = $request->has('harga_beli') ? $request->harga_beli : $barang->harga_beli;
 
         $barang->update([
             'nama_barang' => $request->name,

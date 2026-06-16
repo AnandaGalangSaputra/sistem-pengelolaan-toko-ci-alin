@@ -330,7 +330,7 @@ export const restockProduct = async (productId, amount) => {
   }
 }
 
-export const addProduct = async (name, rack, stock, limit, price, image = '') => {
+export const addProduct = async (name, rack, stock, limit, price, hargaBeli, image = '') => {
   try {
     const response = await fetch('http://localhost:8000/api/barangs', {
       method: 'POST',
@@ -339,7 +339,7 @@ export const addProduct = async (name, rack, stock, limit, price, image = '') =>
         'Accept': 'application/json'
       },
       credentials: 'include',
-      body: JSON.stringify({ name, rack, stock: Number(stock), limit: Number(limit), price: Number(price), image })
+      body: JSON.stringify({ name, rack, stock: Number(stock), limit: Number(limit), price: Number(price), harga_beli: Number(hargaBeli), image })
     })
     const resData = await response.json()
     if (response.ok && resData.success) {
@@ -373,6 +373,7 @@ export const editProduct = async (id, updatedData) => {
         stock: Number(updatedData.stock),
         limit: Number(updatedData.limit),
         price: Number(updatedData.price),
+        harga_beli: Number(updatedData.harga_beli),
         image: updatedData.image
       })
     })
