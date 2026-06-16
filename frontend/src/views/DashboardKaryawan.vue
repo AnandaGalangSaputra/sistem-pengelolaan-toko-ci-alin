@@ -36,15 +36,11 @@ const totalActiveProducts = computed(() => state.products.length)
 const lowStockCount = computed(() => state.products.filter(p => p.stock < p.limit).length)
 
 const totalTransactionsToday = computed(() => {
-  const todayStr = getTodayDateString()
-  return state.transactions.filter(tx => tx.date.startsWith(todayStr)).length
+  return state.transactions.length
 })
 
 const totalRevenueToday = computed(() => {
-  const todayStr = getTodayDateString()
-  return state.transactions
-    .filter(tx => tx.date.startsWith(todayStr))
-    .reduce((acc, tx) => acc + tx.total, 0)
+  return state.transactions.reduce((acc, tx) => acc + tx.total, 0)
 })
 
 // Restock Modal state
@@ -101,7 +97,7 @@ const submitDiscountRequest = () => {
 const weeklySalesData = computed(() => {
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
   const dailySales = [0, 0, 0, 0, 0, 0, 0]
-  
+
   const now = new Date()
   const startOfWeek = getStartOfWeek(now)
   const endOfWeek = new Date(startOfWeek)
@@ -223,7 +219,10 @@ const formatRupiah = (val) => {
               <p class="box-subtitle">Status perangkat penunjang operasional kasir Ce Alin.</p>
             </div>
             <div class="d-flex flex-column gap-2">
-              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3" :class="state.waPaired ? 'border-success' : 'border-secondary'" style="border-left-width: 4px !important;">
+              <div
+                class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3"
+                :class="state.waPaired ? 'border-success' : 'border-secondary'"
+                style="border-left-width: 4px !important;">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-whatsapp fs-5 me-2.5" :class="state.waPaired ? 'text-success' : 'text-secondary'"></i>
                   <span class="small fw-semibold text-dark">WhatsApp Broadcast Gateway</span>
@@ -232,8 +231,10 @@ const formatRupiah = (val) => {
                   {{ state.waPaired ? 'Online' : 'Offline' }}
                 </span>
               </div>
-              
-              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-success" style="border-left-width: 4px !important;">
+
+              <div
+                class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-success"
+                style="border-left-width: 4px !important;">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-printer fs-5 me-2.5 text-success"></i>
                   <span class="small fw-semibold text-dark">Printer Thermal Nota</span>
@@ -241,7 +242,9 @@ const formatRupiah = (val) => {
                 <span class="badge bg-success">Siap</span>
               </div>
 
-              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-primary" style="border-left-width: 4px !important;">
+              <div
+                class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-primary"
+                style="border-left-width: 4px !important;">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-database fs-5 me-2.5 text-primary"></i>
                   <span class="small fw-semibold text-dark">Penyimpanan Lokal (Offline Cache)</span>
