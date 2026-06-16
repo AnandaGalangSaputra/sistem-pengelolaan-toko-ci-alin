@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { state, addBroadcastHistory, pairWA, waTemplates, addCustomer, deleteCustomer } from '../../store/store.js'
+import { ref, computed, watch } from 'vue'
+import { state, addBroadcastHistory, pairWA, waTemplates, addCustomer, deleteCustomer, disconnectWA as disconnectWAStore, sendWABroadcast } from '../../store/store.js'
 import PairWaModal from '../modals/PairWaModal.vue'
 
 const props = defineProps({
@@ -34,6 +34,43 @@ const filteredCustomers = computed(() => {
   return state.customers.filter(c => 
     c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.type.toLowerCase().includes(q)
   )
+})
+
+// Pagination for customers list
+const currentCustomerPage = ref(1)
+const customersPerPage = ref(5)
+
+const totalCustomerPages = computed(() => Math.ceil(filteredCustomers.value.length / customersPerPage.value))
+
+const paginatedCustomers = computed(() => {
+  const start = (currentCustomerPage.value - 1) * customersPerPage.value
+  const end = start + customersPerPage.value
+  return filteredCustomers.value.slice(start, end)
+})
+
+// Visible page list helper (limit to max 5 page links shown)
+const visibleCustomerPages = computed(() => {
+  const range = []
+  const maxVisible = 5
+  let start = Math.max(1, currentCustomerPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalCustomerPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    range.push(i)
+  }
+  return range
+})
+
+// Reset page when search or customer database changes
+watch(searchCustomerQuery, () => {
+  currentCustomerPage.value = 1
+})
+watch(() => state.customers.length, () => {
+  currentCustomerPage.value = 1
 })
 
 const handleAddCustomerSubmit = () => {
@@ -123,74 +160,85 @@ const handlePairConfirm = (num) => {
   }, 4000)
 }
 
-const disconnectWA = () => {
+const disconnectWA = async () => {
   if (confirm('Apakah Anda yakin ingin memutus koneksi WhatsApp?')) {
-    pairWA(false)
-    successToastMsg.value = 'Nomor WhatsApp berhasil diputus!'
-    setTimeout(() => {
-      successToastMsg.value = ''
-    }, 4000)
+    const success = await disconnectWAStore()
+    if (success) {
+      successToastMsg.value = 'Nomor WhatsApp berhasil diputus!'
+      setTimeout(() => {
+        successToastMsg.value = ''
+      }, 4000)
+    } else {
+      alert('Gagal memutus koneksi WhatsApp. Cek service gateway Anda.')
+    }
   }
 }
 
-const sendBroadcast = () => {
+const sendBroadcast = async () => {
   if (!state.waPaired) {
     alert('Silakan hubungkan WhatsApp terlebih dahulu menggunakan tombol Pair WA!')
     return
   }
 
   if (isSendingBroadcast.value) return
+
+  let targetNumbers = []
+  let vipCount = state.customers.filter(c => c.type === 'VIP').length
+  let targetLabel = ''
+
+  if (broadcastTarget.value === 'semua') {
+    targetNumbers = state.customers.map(c => c.phone)
+    targetLabel = `Semua Pelanggan (${state.customers.length} kontak)`
+  } else if (broadcastTarget.value === 'vip') {
+    targetNumbers = state.customers.filter(c => c.type === 'VIP').map(c => c.phone)
+    targetLabel = `Pelanggan VIP (${vipCount} kontak)`
+  } else if (broadcastTarget.value === 'pelanggan-baru') {
+    targetNumbers = newTodayCustomers.value.map(c => c.phone)
+    targetLabel = `Pelanggan Baru Hari Ini (${newTodayCustomers.value.length} kontak)`
+  } else if (broadcastTarget.value === 'test') {
+    const selfNum = state.waPairedNumber ? state.waPairedNumber.replace(/[^0-9]/g, '') : '6281234567890'
+    targetNumbers = [selfNum]
+    targetLabel = `Uji Coba (${selfNum})`
+  }
+
+  if (targetNumbers.length === 0) {
+    alert('Tidak ada kontak penerima untuk target ini!')
+    return
+  }
+
   isSendingBroadcast.value = true
   broadcastProgress.value = 0
 
-  const interval = setInterval(() => {
-    broadcastProgress.value += 10
-    if (broadcastProgress.value >= 100) {
-      clearInterval(interval)
-      setTimeout(() => {
-        isSendingBroadcast.value = false
-        
-        const vipCount = state.customers.filter(c => c.type === 'VIP').length
-        const targetLabel = broadcastTarget.value === 'semua' ? `Semua Pelanggan (${state.customers.length} kontak)` :
-          broadcastTarget.value === 'vip' ? `Pelanggan VIP (${vipCount} kontak)` :
-          broadcastTarget.value === 'pelanggan-baru' ? `Pelanggan Baru Hari Ini (${newTodayCustomers.value.length} kontak)` :
-          'Uji Coba (Nomor Sendiri)'
+  // Call the backend API to trigger broadcast sending
+  const success = await sendWABroadcast(broadcastMessage.value, targetNumbers)
 
-        const templateLabel = waTemplates.find(t => t.id === selectedTemplateId.value)?.title || 'Custom Message'
+  if (success) {
+    // Simulate progress bar based on 2 seconds delay per number
+    const totalDuration = targetNumbers.length * 2000
+    const stepTime = Math.max(totalDuration / 20, 100) // 20 steps, minimum 100ms
+    let steps = 0
 
-        addBroadcastHistory(templateLabel, targetLabel)
-
-        if (broadcastTarget.value === 'test') {
-          const testUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(broadcastMessage.value)}`
-          window.open(testUrl, '_blank')
-        } else if (broadcastTarget.value === 'pelanggan-baru') {
-          if (newTodayCustomers.value.length > 0) {
-            const firstCust = newTodayCustomers.value[0]
-            const testUrl = `https://wa.me/${firstCust.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(broadcastMessage.value)}`
-            window.open(testUrl, '_blank')
-          }
-        } else if (broadcastTarget.value === 'semua') {
-          if (state.customers.length > 0) {
-            const firstCust = state.customers[0]
-            const testUrl = `https://wa.me/${firstCust.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(broadcastMessage.value)}`
-            window.open(testUrl, '_blank')
-          }
-        } else if (broadcastTarget.value === 'vip') {
-          const vipCusts = state.customers.filter(c => c.type === 'VIP')
-          if (vipCusts.length > 0) {
-            const firstCust = vipCusts[0]
-            const testUrl = `https://wa.me/${firstCust.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(broadcastMessage.value)}`
-            window.open(testUrl, '_blank')
-          }
-        }
-
-        successToastMsg.value = `Sukses menyebarkan WhatsApp Broadcast ke ${targetLabel}!`
+    const interval = setInterval(() => {
+      steps++
+      broadcastProgress.value = Math.min(steps * 5, 100)
+      if (broadcastProgress.value >= 100) {
+        clearInterval(interval)
         setTimeout(() => {
-          successToastMsg.value = ''
-        }, 4000)
-      }, 500)
-    }
-  }, 150)
+          isSendingBroadcast.value = false
+
+          const templateLabel = waTemplates.find(t => t.id === selectedTemplateId.value)?.title || 'Custom Message'
+          addBroadcastHistory(templateLabel, targetLabel)
+
+          successToastMsg.value = `Sukses menyebarkan WhatsApp Broadcast ke ${targetLabel}!`
+          setTimeout(() => {
+            successToastMsg.value = ''
+          }, 4000)
+        }, 500)
+      }
+    }, stepTime)
+  } else {
+    isSendingBroadcast.value = false
+  }
 }
 </script>
 
@@ -434,7 +482,7 @@ const sendBroadcast = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="cust in filteredCustomers" :key="cust.id">
+                  <tr v-for="cust in paginatedCustomers" :key="cust.id">
                     <td class="fw-semibold text-dark">{{ cust.name }}</td>
                     <td>
                       <a :href="'https://wa.me/' + cust.phone" target="_blank" class="text-success text-decoration-none fw-semibold">
@@ -457,6 +505,30 @@ const sendBroadcast = () => {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div v-if="totalCustomerPages > 1" class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 pt-2 border-top">
+              <div class="text-muted small" style="font-size: 0.72rem;">
+                Menampilkan <strong>{{ (currentCustomerPage - 1) * customersPerPage + 1 }}</strong> - <strong>{{ Math.min(currentCustomerPage * customersPerPage, filteredCustomers.length) }}</strong> dari <strong>{{ filteredCustomers.length }}</strong>
+              </div>
+              <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" :class="{ disabled: currentCustomerPage === 1 }">
+                    <button class="page-link rounded-start-3 px-1.5 py-0.5" style="font-size: 0.72rem;" @click="currentCustomerPage--" :disabled="currentCustomerPage === 1" aria-label="Previous">
+                      <i class="bi bi-chevron-left"></i>
+                    </button>
+                  </li>
+                  <li v-for="page in visibleCustomerPages" :key="page" class="page-item" :class="{ active: currentCustomerPage === page }">
+                    <button class="page-link px-2 py-0.5" style="font-size: 0.72rem;" @click="currentCustomerPage = page">{{ page }}</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentCustomerPage === totalCustomerPages }">
+                    <button class="page-link rounded-end-3 px-1.5 py-0.5" style="font-size: 0.72rem;" @click="currentCustomerPage++" :disabled="currentCustomerPage === totalCustomerPages" aria-label="Next">
+                      <i class="bi bi-chevron-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
         </div>

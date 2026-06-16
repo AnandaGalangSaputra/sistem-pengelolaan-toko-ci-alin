@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { state, restockProduct } from '../store/store.js'
 import RestockModal from '../components/modals/RestockModal.vue'
 
@@ -49,6 +49,40 @@ const triggerToast = (msg) => {
 const formatRupiah = (val) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 }
+
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value))
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredProducts.value.slice(start, end)
+})
+
+// Visible pages helper (limit to max 5 page links shown)
+const visiblePages = computed(() => {
+  const range = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    range.push(i)
+  }
+  return range
+})
+
+// Reset page when search changes
+watch(() => state.searchQuery, () => {
+  currentPage.value = 1
+})
 </script>
 
 <template>
@@ -142,8 +176,8 @@ const formatRupiah = (val) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(prod, idx) in filteredProducts" :key="prod.id">
-              <td>{{ idx + 1 }}</td>
+            <tr v-for="(prod, idx) in paginatedProducts" :key="prod.id">
+              <td>{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
               <td class="fw-semibold text-dark">{{ prod.name }}</td>
               <td>
                 <span class="badge bg-light text-secondary border py-1.5 px-2.5">
@@ -176,6 +210,30 @@ const formatRupiah = (val) => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
+        <div class="text-muted small">
+          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, filteredProducts.length) }}</strong> dari <strong>{{ filteredProducts.length }}</strong> barang
+        </div>
+        <nav aria-label="Page navigation">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1" aria-label="Previous">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+            </li>
+            <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+              <button class="page-link" @click="currentPage = page">{{ page }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages" aria-label="Next">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { state, addProduct, editProduct, deleteProduct } from '../store/store.js'
 
 const successToastMsg = ref('')
@@ -13,6 +13,43 @@ const filteredProducts = computed(() => {
     p.name.toLowerCase().includes(q) || 
     p.rack.toLowerCase().includes(q)
   )
+})
+
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = ref(12)
+
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value))
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredProducts.value.slice(start, end)
+})
+
+// Visible pages helper (limit to max 5 page links shown)
+const visiblePages = computed(() => {
+  const range = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    range.push(i)
+  }
+  return range
+})
+
+// Reset page when search or viewMode changes
+watch(() => state.searchQuery, () => {
+  currentPage.value = 1
+})
+watch(viewMode, () => {
+  currentPage.value = 1
 })
 
 // Modal states
@@ -181,7 +218,7 @@ const onImageUpload = (event) => {
     <!-- Tampilan 1: Grid Card Bergambar (Default) -->
     <div v-if="viewMode === 'grid'">
       <div class="row g-4">
-        <div v-for="prod in filteredProducts" :key="prod.id" class="col-12 col-sm-6 col-md-4 col-xl-3">
+        <div v-for="prod in paginatedProducts" :key="prod.id" class="col-12 col-sm-6 col-md-4 col-xl-3">
           <div class="card h-100 border-0 shadow-sm overflow-hidden product-card-hover rounded-4 bg-white border">
             <!-- Product Card Header (Image + Location/Status Badges) -->
             <div class="position-relative overflow-hidden bg-light" style="height: 190px;">
@@ -265,8 +302,8 @@ const onImageUpload = (event) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(prod, idx) in filteredProducts" :key="prod.id">
-              <td>{{ idx + 1 }}</td>
+            <tr v-for="(prod, idx) in paginatedProducts" :key="prod.id">
+              <td>{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
               <td class="fw-semibold text-dark">
                 <div class="d-flex align-items-center">
                   <img :src="prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=50&auto=format&fit=crop&q=60'" class="rounded me-2.5 object-fit-cover" style="width: 36px; height: 36px;" />
@@ -305,6 +342,30 @@ const onImageUpload = (event) => {
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 bg-white p-3 rounded-4 border shadow-sm">
+      <div class="text-muted small">
+        Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, filteredProducts.length) }}</strong> dari <strong>{{ filteredProducts.length }}</strong> produk
+      </div>
+      <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1" aria-label="Previous">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+          </li>
+          <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+            <button class="page-link" @click="currentPage = page">{{ page }}</button>
+          </li>
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages" aria-label="Next">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
 
     <!-- Modal: Add Product -->

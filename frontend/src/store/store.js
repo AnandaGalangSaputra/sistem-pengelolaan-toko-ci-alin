@@ -458,9 +458,64 @@ export const addTransaction = async (items, total, discountVal, customer = null)
   }
 }
 
+export const checkWhatsappStatus = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/whatsapp/status', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    state.waPaired = resData.status === 'CONNECTED'
+    state.waPairedNumber = resData.status === 'CONNECTED' ? resData.number : ''
+    return resData.status
+  } catch (error) {
+    console.error('Error checking WhatsApp status:', error)
+  }
+  return 'DISCONNECTED'
+}
+
 export const pairWA = (paired, phoneNumber = '') => {
   state.waPaired = paired
   state.waPairedNumber = paired ? phoneNumber : ''
+}
+
+export const disconnectWA = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/whatsapp/disconnect', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.waPaired = false
+      state.waPairedNumber = ''
+      return true
+    }
+  } catch (error) {
+    console.error('Error disconnecting WhatsApp:', error)
+  }
+  return false
+}
+
+export const sendWABroadcast = async (message, numbers) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/whatsapp/broadcast', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ message, numbers })
+    })
+    const resData = await response.json()
+    return resData.success
+  } catch (error) {
+    console.error('Error sending WhatsApp broadcast:', error)
+    return false
+  }
 }
 
 export const pairPrinter = (paired, name = '') => {

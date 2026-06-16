@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
-import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions } from '../../store/store.js'
+import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, checkWhatsappStatus } from '../../store/store.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -13,6 +13,16 @@ onMounted(() => {
     fetchProducts()
     fetchRacks()
     fetchTransactions()
+    
+    // Check WA status initially and set up 10-second polling
+    checkWhatsappStatus()
+    const waInterval = setInterval(() => {
+      if (state.currentUser) {
+        checkWhatsappStatus()
+      } else {
+        clearInterval(waInterval)
+      }
+    }, 10000)
   }
 })
 

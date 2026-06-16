@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
+import { checkWhatsappStatus } from '../../store/store.js'
 
 const props = defineProps({
   show: Boolean
@@ -7,20 +8,74 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'confirm'])
 
-const isScanning = ref(false)
+const status = ref('DISCONNECTED') // DISCONNECTED, CONNECTING, QR_CODE, CONNECTED
+const qrImage = ref(null)
+let pollInterval = null
 
 const handleClose = () => {
+  stopPolling()
   emit('close')
-  isScanning.value = false
 }
 
-const simulateQrConnect = () => {
-  isScanning.value = true
-  setTimeout(() => {
-    emit('confirm', '+62 812-9988-7766')
-    handleClose()
-  }, 2000)
+const startPolling = () => {
+  stopPolling()
+  
+  const tick = async () => {
+    // Check connection status
+    const currentStatus = await checkWhatsappStatus()
+    status.value = currentStatus
+
+    if (currentStatus === 'CONNECTED') {
+      const response = await fetch('http://localhost:8000/api/whatsapp/status', { credentials: 'include' })
+      const resData = await response.json()
+      emit('confirm', resData.number || '+62 8xx')
+      handleClose()
+      return
+    }
+
+    if (currentStatus === 'QR_CODE') {
+      // Fetch QR image
+      try {
+        const response = await fetch('http://localhost:8000/api/whatsapp/qr', { credentials: 'include' })
+        const resData = await response.json()
+        if (resData.success && resData.qr) {
+          qrImage.value = resData.qr
+        }
+      } catch (e) {
+        console.error("Failed to load QR code image:", e)
+      }
+    } else {
+      qrImage.value = null
+    }
+  }
+
+  // Execute immediately
+  tick()
+
+  // Poll every 2 seconds
+  pollInterval = setInterval(tick, 2000)
 }
+
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    status.value = 'CONNECTING'
+    qrImage.value = null
+    startPolling()
+  } else {
+    stopPolling()
+  }
+})
+
+onUnmounted(() => {
+  stopPolling()
+})
 </script>
 
 <template>
@@ -37,70 +92,38 @@ const simulateQrConnect = () => {
         </div>
 
         <div class="modal-body-custom py-4">
-          <!-- Connection State Animation -->
-          <div v-if="isScanning" class="text-center py-5">
+          <!-- Connecting or Disconnected status (Spinner) -->
+          <div v-if="status === 'CONNECTING' || status === 'DISCONNECTED'" class="text-center py-5">
             <div class="spinner-border text-success mb-3" style="width: 3rem; height: 3rem;" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
-            <h5 class="fw-bold text-dark">Menghubungkan Perangkat...</h5>
-            <p class="text-muted small">Sedang mensinkronisasi kontak dan pesan Anda.</p>
+            <h5 class="fw-bold text-dark">Menyiapkan Perangkat...</h5>
+            <p class="text-muted small">Harap tunggu, sedang menginisialisasi WhatsApp service.</p>
           </div>
 
-          <!-- QR Code Scan View Only -->
-          <div v-else class="text-center">
+          <!-- QR Code Scan View -->
+          <div v-else-if="status === 'QR_CODE'" class="text-center">
             <p class="text-muted small mb-4">Buka WhatsApp di HP Anda, masuk ke Perangkat Tertaut, lalu pindai kode QR di bawah ini.</p>
             
-            <!-- QR Code Mock SVG -->
+            <!-- Real QR Code Image -->
             <div class="d-inline-block p-3 border rounded-3 bg-white shadow-sm mb-4 position-relative">
-              <svg width="180" height="180" viewBox="0 0 100 100" class="d-block mx-auto">
-                <!-- QR Corner Detection Patterns -->
-                <rect x="5" y="5" width="25" height="25" fill="#1e293b" />
-                <rect x="9" y="9" width="17" height="17" fill="#ffffff" />
-                <rect x="12" y="12" width="11" height="11" fill="#1e293b" />
-
-                <rect x="70" y="5" width="25" height="25" fill="#1e293b" />
-                <rect x="74" y="9" width="17" height="17" fill="#ffffff" />
-                <rect x="77" y="12" width="11" height="11" fill="#1e293b" />
-
-                <rect x="5" y="70" width="25" height="25" fill="#1e293b" />
-                <rect x="9" y="74" width="17" height="17" fill="#ffffff" />
-                <rect x="12" y="77" width="11" height="11" fill="#1e293b" />
-                
-                <!-- Center logo block -->
-                <rect x="42" y="42" width="16" height="16" fill="#128c7e" rx="3" />
-                <path d="M47 50 L53 50 M50 47 L50 53" stroke="#ffffff" stroke-width="2" />
-
-                <!-- Random QR noise dots -->
-                <rect x="35" y="10" width="8" height="4" fill="#334155" />
-                <rect x="45" y="5" width="4" height="8" fill="#334155" />
-                <rect x="55" y="15" width="10" height="6" fill="#334155" />
-                <rect x="35" y="25" width="6" height="6" fill="#334155" />
-                
-                <rect x="10" y="35" width="4" height="10" fill="#334155" />
-                <rect x="20" y="40" width="8" height="4" fill="#334155" />
-                <rect x="5" y="50" width="15" height="5" fill="#334155" />
-                <rect x="15" y="60" width="6" height="6" fill="#334155" />
-
-                <rect x="80" y="35" width="10" height="5" fill="#334155" />
-                <rect x="75" y="45" width="6" height="8" fill="#334155" />
-                <rect x="85" y="60" width="8" height="4" fill="#334155" />
-                <rect x="70" y="55" width="4" height="10" fill="#334155" />
-
-                <rect x="35" y="70" width="10" height="8" fill="#334155" />
-                <rect x="50" y="80" width="6" height="10" fill="#334155" />
-                <rect x="40" y="85" width="8" height="4" fill="#334155" />
-                <rect x="60" y="75" width="10" height="5" fill="#334155" />
-                
-                <rect x="75" y="75" width="10" height="10" fill="#334155" />
-                <rect x="80" y="88" width="12" height="6" fill="#334155" />
-              </svg>
+              <img v-if="qrImage" :src="qrImage" alt="WhatsApp QR Code" style="width: 200px; height: 200px; display: block;" />
+              <div v-else class="d-flex align-items-center justify-content-center" style="width: 200px; height: 200px;">
+                <div class="spinner-border text-secondary" role="status"></div>
+              </div>
             </div>
 
-            <div>
-              <button @click="simulateQrConnect" class="btn btn-primary-custom px-5 py-2.5">
-                <i class="bi bi-qr-code-scan me-2"></i>Simulasikan Scan Berhasil
-              </button>
+            <div class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i>
+              Kode QR akan diperbarui secara berkala.
             </div>
+          </div>
+
+          <!-- Connected status (Success) -->
+          <div v-else-if="status === 'CONNECTED'" class="text-center py-5">
+            <i class="bi bi-check-circle-fill text-success fs-1 mb-3"></i>
+            <h5 class="fw-bold text-dark">Berhasil Terhubung!</h5>
+            <p class="text-muted small">WhatsApp Anda telah aktif untuk pengiriman broadcast.</p>
           </div>
         </div>
 
