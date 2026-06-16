@@ -18,7 +18,7 @@ const filteredLowStockProducts = computed(() => {
 })
 
 // Metrics values computed dynamically based on state
-const totalActiveProducts = computed(() => 1240 + state.products.length)
+const totalActiveProducts = computed(() => state.products.length)
 const lowStockCount = computed(() => state.products.filter(p => p.stock < p.limit).length)
 const totalTransactionsToday = computed(() => state.transactions.length + 40) // Baseline 40 + simulation transactions
 const totalRevenueToday = computed(() => {
