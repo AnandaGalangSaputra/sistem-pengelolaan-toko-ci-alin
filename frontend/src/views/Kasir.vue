@@ -134,7 +134,46 @@ const totalPages = computed(() => Math.ceil(availableProducts.value.length / ite
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
-  return availableProducts.value.slice(start, end)
+  return sortedProducts.value.slice(start, end)
+})
+
+// Sorting state for cashier products
+const sortBy = ref('name-asc')
+
+const sortedProducts = computed(() => {
+  const products = [...availableProducts.value]
+  products.sort((a, b) => {
+    if (sortBy.value === 'name-asc') {
+      return a.name.localeCompare(b.name)
+    } else if (sortBy.value === 'name-desc') {
+      return b.name.localeCompare(a.name)
+    } else if (sortBy.value === 'price-asc') {
+      return a.price - b.price
+    } else if (sortBy.value === 'price-desc') {
+      return b.price - a.price
+    } else if (sortBy.value === 'stock-asc') {
+      return a.stock - b.stock
+    } else if (sortBy.value === 'stock-desc') {
+      return b.stock - a.stock
+    }
+    return 0
+  })
+  return products
+})
+
+const toggleSort = (field) => {
+  if (field === 'name') {
+    sortBy.value = sortBy.value === 'name-asc' ? 'name-desc' : 'name-asc'
+  } else if (field === 'price') {
+    sortBy.value = sortBy.value === 'price-asc' ? 'price-desc' : 'price-asc'
+  } else if (field === 'stock') {
+    sortBy.value = sortBy.value === 'stock-asc' ? 'stock-desc' : 'stock-asc'
+  }
+}
+
+// Reset page when sortBy changes
+watch(sortBy, () => {
+  currentPage.value = 1
 })
 
 // Visible pages helper (limit to max 5 page links shown)
@@ -202,10 +241,19 @@ watch(searchProductQuery, () => {
             <table class="table custom-table align-middle">
               <thead>
                 <tr>
-                  <th>Nama Barang</th>
+                  <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
+                    Nama Barang
+                    <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                  </th>
                   <th>Rak</th>
-                  <th>Harga</th>
-                  <th>Stok</th>
+                  <th @click="toggleSort('price')" style="cursor: pointer; user-select: none;">
+                    Harga
+                    <i class="bi ms-1" :class="sortBy.startsWith('price') ? (sortBy === 'price-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                  </th>
+                  <th @click="toggleSort('stock')" style="cursor: pointer; user-select: none;">
+                    Stok
+                    <i class="bi ms-1" :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                  </th>
                   <th class="text-center">Aksi</th>
                 </tr>
               </thead>

@@ -24,7 +24,46 @@ const totalPages = computed(() => Math.ceil(filteredProducts.value.length / item
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
-  return filteredProducts.value.slice(start, end)
+  return sortedProducts.value.slice(start, end)
+})
+
+// Sorting state
+const sortBy = ref('name-asc')
+
+const sortedProducts = computed(() => {
+  const products = [...filteredProducts.value]
+  products.sort((a, b) => {
+    if (sortBy.value === 'name-asc') {
+      return a.name.localeCompare(b.name)
+    } else if (sortBy.value === 'name-desc') {
+      return b.name.localeCompare(a.name)
+    } else if (sortBy.value === 'price-asc') {
+      return a.price - b.price
+    } else if (sortBy.value === 'price-desc') {
+      return b.price - a.price
+    } else if (sortBy.value === 'stock-asc') {
+      return a.stock - b.stock
+    } else if (sortBy.value === 'stock-desc') {
+      return b.stock - a.stock
+    }
+    return 0
+  })
+  return products
+})
+
+const toggleSort = (field) => {
+  if (field === 'name') {
+    sortBy.value = sortBy.value === 'name-asc' ? 'name-desc' : 'name-asc'
+  } else if (field === 'price') {
+    sortBy.value = sortBy.value === 'price-asc' ? 'price-desc' : 'price-asc'
+  } else if (field === 'stock') {
+    sortBy.value = sortBy.value === 'stock-asc' ? 'stock-desc' : 'stock-asc'
+  }
+}
+
+// Reset page when sortBy changes
+watch(sortBy, () => {
+  currentPage.value = 1
 })
 
 // Visible pages helper (limit to max 5 page links shown)
@@ -189,9 +228,19 @@ const onImageUpload = (event) => {
         <p class="page-subtitle">Kelola nama produk, lokasi rak penyimpanan, dan harga jual produk Toko Ce Alin.</p>
       </div>
 
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 align-items-center">
+        <!-- Sort Dropdown -->
+        <select v-model="sortBy" class="form-select border rounded-3 py-1 px-2.5 bg-white text-muted small" style="width: auto; height: 38px; font-size: 0.82rem; border-color: #dee2e6;">
+          <option value="name-asc">Nama: A-Z</option>
+          <option value="name-desc">Nama: Z-A</option>
+          <option value="price-asc">Harga: Terendah</option>
+          <option value="price-desc">Harga: Tertinggi</option>
+          <option value="stock-asc">Stok: Terendah</option>
+          <option value="stock-desc">Stok: Tertinggi</option>
+        </select>
+
         <!-- View toggle buttons -->
-        <div class="btn-group border rounded-3 p-1 bg-white me-2">
+        <div class="btn-group border rounded-3 p-1 bg-white">
           <button 
             @click="viewMode = 'grid'" 
             class="btn btn-sm py-1.5 px-3 border-0 d-flex align-items-center"
@@ -293,10 +342,19 @@ const onImageUpload = (event) => {
           <thead>
             <tr>
               <th style="width: 60px;">No</th>
-              <th>Nama Produk</th>
+              <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
+                Nama Produk
+                <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th>Lokasi Rak</th>
-              <th>Harga Jual</th>
-              <th>Stok Tersedia</th>
+              <th @click="toggleSort('price')" style="cursor: pointer; user-select: none;">
+                Harga Jual
+                <i class="bi ms-1" :class="sortBy.startsWith('price') ? (sortBy === 'price-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
+              <th @click="toggleSort('stock')" style="cursor: pointer; user-select: none;">
+                Stok Tersedia
+                <i class="bi ms-1" :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th>Status</th>
               <th style="width: 150px;" class="text-center" v-if="state.currentUser?.role === 'owner'">Aksi</th>
             </tr>

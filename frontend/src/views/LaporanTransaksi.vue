@@ -71,7 +71,46 @@ const totalPages = computed(() => Math.ceil(transactionsList.value.length / item
 const paginatedTransactions = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
-  return transactionsList.value.slice(start, end)
+  return sortedTransactions.value.slice(start, end)
+})
+
+// Sorting state
+const sortBy = ref('date-desc') // default newest first
+
+const sortedTransactions = computed(() => {
+  const list = [...transactionsList.value]
+  list.sort((a, b) => {
+    if (sortBy.value === 'id-asc') {
+      return a.id - b.id
+    } else if (sortBy.value === 'id-desc') {
+      return b.id - a.id
+    } else if (sortBy.value === 'date-asc') {
+      return a.id - b.id
+    } else if (sortBy.value === 'date-desc') {
+      return b.id - a.id
+    } else if (sortBy.value === 'total-asc') {
+      return a.total - b.total
+    } else if (sortBy.value === 'total-desc') {
+      return b.total - a.total
+    }
+    return 0
+  })
+  return list
+})
+
+const toggleSort = (field) => {
+  if (field === 'id') {
+    sortBy.value = sortBy.value === 'id-asc' ? 'id-desc' : 'id-asc'
+  } else if (field === 'date') {
+    sortBy.value = sortBy.value === 'date-asc' ? 'date-desc' : 'date-asc'
+  } else if (field === 'total') {
+    sortBy.value = sortBy.value === 'total-asc' ? 'total-desc' : 'total-asc'
+  }
+}
+
+// Reset page when sortBy changes
+watch(sortBy, () => {
+  currentPage.value = 1
 })
 
 // Visible pages helper (limit to max 5 page links shown)
@@ -229,12 +268,21 @@ watch(() => state.transactions.length, () => {
         <table class="table custom-table align-middle">
           <thead>
             <tr>
-              <th>ID Transaksi</th>
-              <th>Waktu</th>
+              <th @click="toggleSort('id')" style="cursor: pointer; user-select: none;">
+                ID Transaksi
+                <i class="bi ms-1" :class="sortBy.startsWith('id') ? (sortBy === 'id-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
+              <th @click="toggleSort('date')" style="cursor: pointer; user-select: none;">
+                Waktu
+                <i class="bi ms-1" :class="sortBy.startsWith('date') ? (sortBy === 'date-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th>Nama Pembeli</th>
               <th>Jumlah Item</th>
               <th>Potongan Diskon</th>
-              <th>Total Pembayaran</th>
+              <th @click="toggleSort('total')" style="cursor: pointer; user-select: none;">
+                Total Pembayaran
+                <i class="bi ms-1" :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th class="text-center">Status</th>
             </tr>
           </thead>

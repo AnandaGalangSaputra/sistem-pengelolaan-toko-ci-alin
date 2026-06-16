@@ -45,7 +45,40 @@ const totalCustomerPages = computed(() => Math.ceil(filteredCustomers.value.leng
 const paginatedCustomers = computed(() => {
   const start = (currentCustomerPage.value - 1) * customersPerPage.value
   const end = start + customersPerPage.value
-  return filteredCustomers.value.slice(start, end)
+  return sortedCustomers.value.slice(start, end)
+})
+
+// Sorting state for customer list
+const sortBy = ref('name-asc')
+
+const sortedCustomers = computed(() => {
+  const customers = [...filteredCustomers.value]
+  customers.sort((a, b) => {
+    if (sortBy.value === 'name-asc') {
+      return a.name.localeCompare(b.name)
+    } else if (sortBy.value === 'name-desc') {
+      return b.name.localeCompare(a.name)
+    } else if (sortBy.value === 'type-asc') {
+      return a.type.localeCompare(b.type)
+    } else if (sortBy.value === 'type-desc') {
+      return b.type.localeCompare(a.type)
+    }
+    return 0
+  })
+  return customers
+})
+
+const toggleSort = (field) => {
+  if (field === 'name') {
+    sortBy.value = sortBy.value === 'name-asc' ? 'name-desc' : 'name-asc'
+  } else if (field === 'type') {
+    sortBy.value = sortBy.value === 'type-asc' ? 'type-desc' : 'type-asc'
+  }
+}
+
+// Reset page when sortBy changes
+watch(sortBy, () => {
+  currentCustomerPage.value = 1
 })
 
 // Visible page list helper (limit to max 5 page links shown)
@@ -475,9 +508,15 @@ const sendBroadcast = async () => {
               <table class="table custom-table align-middle" style="font-size: 0.82rem;">
                 <thead>
                   <tr>
-                    <th>Nama</th>
+                    <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
+                      Nama
+                      <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                    </th>
                     <th>No. WhatsApp</th>
-                    <th>Tipe</th>
+                    <th @click="toggleSort('type')" style="cursor: pointer; user-select: none;">
+                      Tipe
+                      <i class="bi ms-1" :class="sortBy.startsWith('type') ? (sortBy === 'type-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                    </th>
                     <th class="text-center">Aksi</th>
                   </tr>
                 </thead>

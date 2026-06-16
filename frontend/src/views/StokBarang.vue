@@ -59,7 +59,46 @@ const totalPages = computed(() => Math.ceil(filteredProducts.value.length / item
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
-  return filteredProducts.value.slice(start, end)
+  return sortedProducts.value.slice(start, end)
+})
+
+// Sorting state
+const sortBy = ref('name-asc')
+
+const sortedProducts = computed(() => {
+  const products = [...filteredProducts.value]
+  products.sort((a, b) => {
+    if (sortBy.value === 'name-asc') {
+      return a.name.localeCompare(b.name)
+    } else if (sortBy.value === 'name-desc') {
+      return b.name.localeCompare(a.name)
+    } else if (sortBy.value === 'stock-asc') {
+      return a.stock - b.stock
+    } else if (sortBy.value === 'stock-desc') {
+      return b.stock - a.stock
+    } else if (sortBy.value === 'limit-asc') {
+      return a.limit - b.limit
+    } else if (sortBy.value === 'limit-desc') {
+      return b.limit - a.limit
+    }
+    return 0
+  })
+  return products
+})
+
+const toggleSort = (field) => {
+  if (field === 'name') {
+    sortBy.value = sortBy.value === 'name-asc' ? 'name-desc' : 'name-asc'
+  } else if (field === 'stock') {
+    sortBy.value = sortBy.value === 'stock-asc' ? 'stock-desc' : 'stock-asc'
+  } else if (field === 'limit') {
+    sortBy.value = sortBy.value === 'limit-asc' ? 'limit-desc' : 'limit-asc'
+  }
+}
+
+// Reset page when sortBy changes
+watch(sortBy, () => {
+  currentPage.value = 1
 })
 
 // Visible pages helper (limit to max 5 page links shown)
@@ -167,10 +206,19 @@ watch(() => state.searchQuery, () => {
           <thead>
             <tr>
               <th style="width: 60px;">No</th>
-              <th>Nama Barang</th>
+              <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
+                Nama Barang
+                <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th>Lokasi Rak</th>
-              <th>Stok Saat Ini</th>
-              <th>Batas Limit</th>
+              <th @click="toggleSort('stock')" style="cursor: pointer; user-select: none;">
+                Stok Saat Ini
+                <i class="bi ms-1" :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
+              <th @click="toggleSort('limit')" style="cursor: pointer; user-select: none;">
+                Batas Limit
+                <i class="bi ms-1" :class="sortBy.startsWith('limit') ? (sortBy === 'limit-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+              </th>
               <th>Status</th>
               <th style="width: 150px;" class="text-center">Aksi</th>
             </tr>
