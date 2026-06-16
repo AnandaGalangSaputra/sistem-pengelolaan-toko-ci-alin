@@ -6,8 +6,8 @@ const successToastMsg = ref('')
 
 // Profile forms state
 const formName = ref(state.currentUser.name)
-const formRole = ref(state.currentUser.role)
-const formEmail = ref('IjazahnyaMana@gmail.com')
+const formRole = ref(state.currentUser.role ? state.currentUser.role.toLowerCase() : 'karyawan')
+const formEmail = ref(state.currentUser.username || 'karyawan')
 
 // Password forms state
 const currentPassword = ref('')
@@ -21,7 +21,7 @@ const updateProfile = () => {
   }
 
   state.currentUser.name = formName.value
-  state.currentUser.role = formRole.value
+  state.currentUser.role = formRole.value.toLowerCase()
 
   triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
 }
@@ -91,14 +91,14 @@ const triggerToast = (msg) => {
               </div>
               <div class="col-6">
                 <label for="profRole" class="form-label-style">Peran Akses (Role)</label>
-                <select id="profRole" v-model="formRole" class="form-select-style" required>
-                  <option value="Owner">Owner (Pemilik Toko)</option>
-                  <option value="Karyawan">Karyawan (Kasir / Staff Rak)</option>
+                <select id="profRole" v-model="formRole" class="form-select-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required>
+                  <option value="owner">Owner (Pemilik Toko)</option>
+                  <option value="karyawan">Karyawan (Kasir / Staff Rak)</option>
                 </select>
               </div>
             </div>
 
-            <div class="alert alert-info border-0 rounded-3 py-2 px-3 mb-4 small">
+            <div v-if="state.currentUser.role.toLowerCase() === 'owner'" class="alert alert-info border-0 rounded-3 py-2 px-3 mb-4 small">
               <i class="bi bi-info-circle-fill me-2 fs-6"></i>
               <span>Anda dapat mengubah peran akses antara **Owner** dan **Karyawan** secara langsung untuk mensimulasikan hak akses menu sidebar.</span>
             </div>

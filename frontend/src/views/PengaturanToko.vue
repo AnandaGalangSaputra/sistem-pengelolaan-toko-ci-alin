@@ -105,31 +105,31 @@ const triggerToast = (msg) => {
           <form @submit.prevent="saveConfig">
             <div class="mb-3">
               <label for="shopName" class="form-label-style">Nama Toko</label>
-              <input type="text" id="shopName" v-model="shopConfig.name" class="form-control-style" required />
+              <input type="text" id="shopName" v-model="shopConfig.name" class="form-control-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required />
             </div>
 
             <div class="mb-3">
               <label for="shopAddress" class="form-label-style">Alamat Toko</label>
-              <textarea id="shopAddress" v-model="shopConfig.address" rows="3" class="form-control-style" required></textarea>
+              <textarea id="shopAddress" v-model="shopConfig.address" rows="3" class="form-control-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required></textarea>
             </div>
 
             <div class="row g-3 mb-3">
               <div class="col-6">
                 <label for="shopWa" class="form-label-style">No. WhatsApp Toko</label>
-                <input type="text" id="shopWa" v-model="shopConfig.whatsapp" class="form-control-style" required />
+                <input type="text" id="shopWa" v-model="shopConfig.whatsapp" class="form-control-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required />
               </div>
               <div class="col-6">
                 <label for="shopHours" class="form-label-style">Jam Operasional</label>
-                <input type="text" id="shopHours" v-model="shopConfig.openHours" class="form-control-style" required />
+                <input type="text" id="shopHours" v-model="shopConfig.openHours" class="form-control-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required />
               </div>
             </div>
 
             <div class="mb-4">
               <label for="receiptHeader" class="form-label-style">Catatan Kaki Struk (Footer)</label>
-              <input type="text" id="receiptHeader" v-model="shopConfig.receiptHeader" class="form-control-style" required />
+              <input type="text" id="receiptHeader" v-model="shopConfig.receiptHeader" class="form-control-style" :disabled="state.currentUser.role.toLowerCase() === 'karyawan'" required />
             </div>
 
-            <button type="submit" class="btn btn-primary-custom px-4 py-2.5">
+            <button v-if="state.currentUser.role.toLowerCase() === 'owner'" type="submit" class="btn btn-primary-custom px-4 py-2.5">
               <i class="bi bi-save-fill me-2"></i>Simpan Perubahan
             </button>
           </form>
@@ -194,8 +194,8 @@ const triggerToast = (msg) => {
             </div>
           </div>
 
-          <!-- Simulation database tools -->
-          <div class="card-content-box shadow-sm border border-danger border-opacity-25" style="background-color: #fff8f8;">
+          <!-- Simulation database tools (Only Owner can reset database) -->
+          <div v-if="state.currentUser.role.toLowerCase() === 'owner'" class="card-content-box shadow-sm border border-danger border-opacity-25" style="background-color: #fff8f8;">
             <div class="box-header mb-3">
               <h2 class="box-title text-danger">Pusat Bahaya / Reset Sistem</h2>
               <p class="box-subtitle">Aksi pembersihan cache penyimpanan lokal browser Anda.</p>

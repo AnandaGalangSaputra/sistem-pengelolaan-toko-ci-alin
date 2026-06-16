@@ -76,7 +76,12 @@ router.beforeEach((to, from, next) => {
   } else if (to.name === 'Login' && isLoggedIn) {
     next('/dashboard-karyawan')
   } else {
-    next()
+    const role = state.currentUser?.role?.toLowerCase()
+    if (to.name === 'LaporanTransaksi' && role !== 'owner') {
+      next('/dashboard-karyawan')
+    } else {
+      next()
+    }
   }
 })
 

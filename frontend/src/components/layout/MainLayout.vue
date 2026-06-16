@@ -9,23 +9,35 @@ const router = useRouter()
 const route = useRoute()
 
 const employeeName = computed(() => state.currentUser.name)
-const employeeRole = computed(() => state.currentUser.role === 'Owner' ? 'Owner / Pemilik Toko' : 'Kasir / Karyawan Toko')
+const employeeRole = computed(() => {
+  const role = state.currentUser?.role?.toLowerCase()
+  return role === 'owner' ? 'Owner / Pemilik Toko' : 'Kasir / Karyawan Toko'
+})
 
 // Compute low stock count from store state
 const lowStockCount = computed(() => {
   return state.products.filter(p => p.stock < p.limit).length
 })
 
-const sidebarMenu = computed(() => [
-  { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-1x2-fill', active: route.name === 'DashboardKaryawan' },
-  { id: 'data-barang', label: 'Data Barang', icon: 'bi-box-seam', active: route.name === 'DataBarang' },
-  { id: 'stok-barang', label: 'Stok Barang', icon: 'bi-journal-bookmark', active: route.name === 'StokBarang' },
-  { id: 'kasir', label: 'Kasir', icon: 'bi-calculator', active: route.name === 'Kasir' },
-  { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' },
-  { id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' },
-  { id: 'pengaturan', label: 'Pengaturan', icon: 'bi-gear', active: route.name === 'PengaturanToko' },
-  { id: 'akun', label: 'Akun', icon: 'bi-person-circle', active: route.name === 'AkunKaryawan' }
-])
+const sidebarMenu = computed(() => {
+  const role = state.currentUser?.role?.toLowerCase()
+  const menus = [
+    { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-1x2-fill', active: route.name === 'DashboardKaryawan' },
+    { id: 'data-barang', label: 'Data Barang', icon: 'bi-box-seam', active: route.name === 'DataBarang' },
+    { id: 'stok-barang', label: 'Stok Barang', icon: 'bi-journal-bookmark', active: route.name === 'StokBarang' },
+    { id: 'kasir', label: 'Kasir', icon: 'bi-calculator', active: route.name === 'Kasir' },
+    { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' }
+  ]
+
+  if (role === 'owner') {
+    menus.push({ id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' })
+  }
+
+  menus.push({ id: 'pengaturan', label: 'Pengaturan', icon: 'bi-gear', active: route.name === 'PengaturanToko' })
+  menus.push({ id: 'akun', label: 'Akun', icon: 'bi-person-circle', active: route.name === 'AkunKaryawan' })
+
+  return menus
+})
 
 const changeMenu = (menuId) => {
   if (menuId === 'dashboard') router.push('/dashboard-karyawan')
