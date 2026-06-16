@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { state } from '../store/store.js'
 
 const formatRupiah = (val) => {
@@ -34,14 +34,60 @@ const salesTarget = 3000000
 const targetPercent = computed(() => {
   return Math.min(100, Math.round((totalRevenue.value / salesTarget) * 100))
 })
+
+// Printing States
+const showPrintModal = ref(false)
+const printType = ref('harian') // 'harian' or 'bulanan'
+
+const triggerPrint = (type) => {
+  printType.value = type
+  showPrintModal.value = true
+}
+
+const executePrint = () => {
+  window.print()
+}
+
+// Load configurations from localStorage
+const getShopName = () => {
+  const saved = localStorage.getItem('shop_name')
+  return saved ? JSON.parse(saved) : 'Toko Ce Alin'
+}
+const getShopAddress = () => {
+  const saved = localStorage.getItem('shop_address')
+  return saved ? JSON.parse(saved) : 'Jalan Raya Sembako No. 7, Jakarta Barat'
+}
+const getShopWa = () => {
+  const saved = localStorage.getItem('shop_whatsapp')
+  return saved ? JSON.parse(saved) : '+62 812-3456-7890'
+}
 </script>
 
 <template>
   <div class="laporan-wrapper">
-    <!-- Page Title -->
-    <div class="content-header mb-4">
-      <h1 class="page-title">Laporan Transaksi</h1>
-      <p class="page-subtitle">Analisis hasil penjualan, omset omzet harian, potongan diskon, dan capaian target Toko Ce Alin.</p>
+    <!-- Success Toast Alert -->
+    <transition name="fade">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>{{ successToastMsg }}</div>
+      </div>
+    </transition>
+
+    <!-- Page Title & Actions -->
+    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h1 class="page-title">Laporan Transaksi</h1>
+        <p class="page-subtitle">Analisis hasil penjualan, omset harian, potongan diskon, dan capaian target Toko Ce Alin.</p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button @click="triggerPrint('harian')" class="btn btn-outline-primary-custom d-flex align-items-center py-2 px-3">
+          <i class="bi bi-printer-fill me-1.5"></i>Cetak Harian
+        </button>
+        <button @click="triggerPrint('bulanan')" class="btn btn-primary-custom d-flex align-items-center py-2 px-3">
+          <i class="bi bi-file-earmark-bar-graph-fill me-1.5"></i>Cetak Bulanan
+        </button>
+      </div>
     </div>
 
     <!-- Stats Cards -->
@@ -151,6 +197,7 @@ const targetPercent = computed(() => {
             <tr>
               <th>ID Transaksi</th>
               <th>Waktu</th>
+              <th>Nama Pembeli</th>
               <th>Jumlah Item</th>
               <th>Potongan Diskon</th>
               <th>Total Pembayaran</th>
@@ -161,6 +208,12 @@ const targetPercent = computed(() => {
             <tr v-for="tx in transactionsList" :key="tx.id">
               <td class="font-monospace text-muted" style="font-size: 0.82rem;">#TX-{{ tx.id }}</td>
               <td class="fw-semibold text-dark">{{ tx.time }} WIB</td>
+              <td>
+                <span class="fw-bold text-dark">{{ tx.customer?.name || 'Umum' }}</span>
+                <span v-if="tx.customer?.phone" class="text-muted d-block small" style="font-size: 0.75rem;">
+                  <i class="bi bi-whatsapp text-success me-1"></i>{{ tx.customer?.phone }}
+                </span>
+              </td>
               <td>{{ tx.itemsCount }} unit barang</td>
               <td class="text-danger fw-semibold">{{ tx.discount > 0 ? formatRupiah(tx.discount) : '-' }}</td>
               <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
@@ -171,12 +224,133 @@ const targetPercent = computed(() => {
               </td>
             </tr>
             <tr v-if="transactionsList.length === 0">
-              <td colspan="6" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
+              <td colspan="7" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Print Report Preview Modal -->
+    <transition name="modal">
+      <div v-if="showPrintModal" class="modal-backdrop-custom d-print-none">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 680px; height: 90vh;">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Pratinjau Cetak Laporan
+            </h3>
+            <button @click="showPrintModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom overflow-y-auto bg-light p-4" style="flex: 1;">
+            <!-- Printable Sheet Paper wrapper -->
+            <div class="printable-report-area bg-white shadow-sm p-5 border rounded-2 mx-auto" style="width: 100%; max-width: 580px; min-height: 700px; color: #000000; font-family: 'Poppins', sans-serif;">
+              <!-- Document Shop Header -->
+              <div class="text-center border-bottom pb-4 mb-4">
+                <h3 class="fw-bold mb-1" style="color: #1e293b; font-size: 1.4rem;">{{ getShopName() }}</h3>
+                <p class="text-secondary small mb-1" style="font-size: 0.8rem;">{{ getShopAddress() }}</p>
+                <p class="text-secondary small mb-0" style="font-size: 0.8rem;">
+                  <i class="bi bi-whatsapp text-success me-1"></i>WhatsApp: {{ getShopWa() }}
+                </p>
+              </div>
+
+              <!-- Report Title Section -->
+              <div class="text-center mb-4">
+                <h5 class="fw-bold mb-1" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 1rem; color: #0f172a;">
+                  LAPORAN PENJUALAN {{ printType === 'harian' ? 'HARIAN' : 'BULANAN' }}
+                </h5>
+                <p class="text-muted small" style="font-size: 0.78rem;">
+                  Periode: {{ printType === 'harian' ? '16 Juni 2026' : 'Juni 2026' }}
+                </p>
+              </div>
+
+              <!-- Key Metrics Grid inside PDF -->
+              <div class="row g-3 mb-4.5 border-bottom pb-4">
+                <div class="col-6">
+                  <div class="small text-muted mb-0.5">Total Omset Pendapatan</div>
+                  <div class="fw-bold" style="font-size: 1.15rem; color: #16a34a;">{{ formatRupiah(totalRevenue) }}</div>
+                </div>
+                <div class="col-6">
+                  <div class="small text-muted mb-0.5">Rata-rata Penjualan</div>
+                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ formatRupiah(avgTransactionValue) }}</div>
+                </div>
+                <div class="col-6 mt-3">
+                  <div class="small text-muted mb-0.5">Total Transaksi Selesai</div>
+                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ totalTransactionsCount }} Transaksi</div>
+                </div>
+                <div class="col-6 mt-3">
+                  <div class="small text-muted mb-0.5">Total Potongan Diskon</div>
+                  <div class="fw-bold text-danger" style="font-size: 1.15rem;">{{ formatRupiah(totalDiscounts) }}</div>
+                </div>
+              </div>
+
+              <!-- Transactions Table inside PDF -->
+              <div class="mt-4">
+                <h6 class="fw-bold mb-2.5 text-dark" style="font-size: 0.85rem;">Rincian Log Transaksi Penjualan</h6>
+                <table class="w-100" style="font-size: 0.78rem; border-collapse: collapse;">
+                  <thead>
+                    <tr style="border-bottom: 2px solid #cbd5e1; border-top: 1px solid #e2e8f0; background-color: #f8fafc;">
+                      <th class="py-2 text-start px-2" style="width: 100px;">ID Transaksi</th>
+                      <th class="py-2 text-start px-2" style="width: 70px;">Waktu</th>
+                      <th class="py-2 text-start px-2">Nama Pelanggan</th>
+                      <th class="py-2 class text-center px-2" style="width: 80px;">Item</th>
+                      <th class="py-2 text-end px-2" style="width: 110px;">Total Bayar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="tx in transactionsList.slice(0, 8)" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
+                      <td class="py-2 px-2 font-monospace text-secondary">#TX-{{ tx.id.toString().slice(-4) }}</td>
+                      <td class="py-2 px-2">{{ tx.time }}</td>
+                      <td class="py-2 px-2 text-dark">{{ tx.customer?.name || 'Umum' }}</td>
+                      <td class="py-2 px-2 text-center">{{ tx.itemsCount }} unit</td>
+                      <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(tx.total) }}</td>
+                    </tr>
+                    <!-- Mock transaction fillers for realistic visual report height -->
+                    <tr v-if="printType === 'bulanan'" style="border-bottom: 1px solid #f1f5f9;">
+                      <td class="py-2 px-2 font-monospace text-secondary">#TX-4402</td>
+                      <td class="py-2 px-2">Kemarin</td>
+                      <td class="py-2 px-2 text-dark">Rudi Hermawan</td>
+                      <td class="py-2 px-2 text-center">3 unit</td>
+                      <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(185000) }}</td>
+                    </tr>
+                    <tr v-if="printType === 'bulanan'" style="border-bottom: 1px solid #f1f5f9;">
+                      <td class="py-2 px-2 font-monospace text-secondary">#TX-4399</td>
+                      <td class="py-2 px-2">Kemarin</td>
+                      <td class="py-2 px-2 text-dark">Siti Aminah</td>
+                      <td class="py-2 px-2 text-center">1 unit</td>
+                      <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(75000) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Signatures Row inside PDF -->
+              <div class="row mt-5 pt-5 text-center" style="font-size: 0.8rem;">
+                <div class="col-6">
+                  <div class="text-secondary small mb-5">Kasir Toko</div>
+                  <div class="fw-bold text-dark" style="text-decoration: underline;">Ananda Galang</div>
+                  <div class="text-muted small" style="font-size: 0.72rem;">Staff Operasional</div>
+                </div>
+                <div class="col-6">
+                  <div class="text-secondary small mb-5">Pemilik Toko</div>
+                  <div class="fw-bold text-dark" style="text-decoration: underline;">Ce Alin</div>
+                  <div class="text-muted small" style="font-size: 0.72rem;">Owner Toko</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top bg-light">
+            <button @click="showPrintModal = false" class="btn-cancel">Batal</button>
+            <button @click="executePrint" class="btn-confirm d-flex align-items-center">
+              <i class="bi bi-printer me-1.5"></i>Cetak Laporan (PDF)
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -190,6 +364,31 @@ const targetPercent = computed(() => {
   .laporan-wrapper {
     height: auto;
     padding: 20px;
+  }
+}
+
+/* Custom Printable CSS rules */
+@media print {
+  body {
+    background-color: #ffffff !important;
+  }
+  /* Hide all dashboard containers and sidebar wrapper in screen during print layout */
+  .dashboard-container, .sidebar, .top-header-main, .laporan-wrapper, .modal-backdrop-custom {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  /* Display only the printable block area of PDF preview */
+  .printable-report-area {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 }
 </style>

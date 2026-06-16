@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive } from 'vue'
+import { state, pairPrinter } from '../store/store.js'
 
 const successToastMsg = ref('')
 
@@ -38,6 +39,33 @@ const resetSimulationData = () => {
     setTimeout(() => {
       window.location.reload()
     }, 1500)
+  }
+}
+
+// Printer Pairing States & Actions
+const showPrinterModal = ref(false)
+const isScanning = ref(false)
+const selectedPrinter = ref('RP-58A Thermal Printer')
+const printerList = ['RP-58A Thermal Printer (Bluetooth)', 'EPSON TM-T82 Thermal (USB/LAN)', 'Generic POS-58 Printer (Bluetooth)']
+
+const triggerPairPrinter = () => {
+  isScanning.value = true
+  showPrinterModal.value = true
+  setTimeout(() => {
+    isScanning.value = false
+  }, 2000)
+}
+
+const confirmPrinterPair = () => {
+  pairPrinter(true, selectedPrinter.value)
+  showPrinterModal.value = false
+  triggerToast(`Berhasil menautkan printer thermal: ${selectedPrinter.value}!`)
+}
+
+const disconnectPrinter = () => {
+  if (confirm('Apakah Anda yakin ingin memutus koneksi printer thermal?')) {
+    pairPrinter(false)
+    triggerToast('Koneksi printer thermal diputus.')
   }
 }
 
@@ -142,12 +170,27 @@ const triggerToast = (msg) => {
               </div>
             </div>
 
-            <div class="p-3 bg-light border rounded-3 text-center mb-1">
-              <div class="d-flex align-items-center justify-content-center text-success mb-1 small fw-bold">
-                <i class="bi bi-check-circle-fill me-1.5 fs-5"></i>
-                <span>Printer Bluetooth Terhubung</span>
+            <!-- Printer Connection Status Panel -->
+            <div class="border rounded-3 p-3 bg-light text-center mb-1">
+              <div v-if="state.printerPaired">
+                <div class="d-flex align-items-center justify-content-center text-success mb-1 small fw-bold">
+                  <i class="bi bi-check-circle-fill me-1.5 fs-5"></i>
+                  <span>Printer Thermal Terhubung</span>
+                </div>
+                <span class="text-muted d-block small mb-3" style="font-size: 0.72rem;">Model: {{ state.printerPairedName }} (Online)</span>
+                <button @click="disconnectPrinter" class="btn btn-sm btn-outline-danger w-100 py-1.5 fw-semibold">
+                  Putus Koneksi Printer
+                </button>
               </div>
-              <span class="text-muted small" style="font-size: 0.72rem;">Model: RP-58A Thermal Printer (Online)</span>
+              <div v-else>
+                <div class="d-flex align-items-center justify-content-center text-secondary mb-2 small fw-bold">
+                  <i class="bi bi-printer-fill me-1.5 fs-5 text-secondary"></i>
+                  <span>Printer Belum Ditautkan</span>
+                </div>
+                <button @click="triggerPairPrinter" class="btn btn-sm btn-primary-custom w-100 py-2">
+                  <i class="bi bi-link-45deg me-1"></i>Tautkan Printer thermal
+                </button>
+              </div>
             </div>
           </div>
 
@@ -167,6 +210,57 @@ const triggerToast = (msg) => {
         </div>
       </div>
     </div>
+
+    <!-- Printer Pairing Simulation Modal -->
+    <transition name="modal">
+      <div v-if="showPrinterModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 440px;">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-printer text-primary me-2"></i>Tautkan Printer Thermal Struk
+            </h3>
+            <button @click="showPrinterModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom py-4">
+            <div v-if="isScanning" class="text-center py-4">
+              <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Scanning...</span>
+              </div>
+              <h6 class="fw-bold text-dark">Memindai Perangkat Terdekat...</h6>
+              <p class="text-muted small mb-0">Pastikan Bluetooth printer thermal Anda aktif.</p>
+            </div>
+            <div v-else>
+              <p class="text-muted small mb-3">Pilih printer thermal Bluetooth/USB yang terdeteksi di sekitar Anda:</p>
+              
+              <div class="d-flex flex-column gap-2 mb-3">
+                <div 
+                  v-for="printer in printerList" 
+                  :key="printer" 
+                  @click="selectedPrinter = printer" 
+                  class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-start style-clickable-item"
+                  :class="selectedPrinter === printer ? 'border-primary bg-light-primary-mini' : 'bg-white'"
+                  style="cursor: pointer;"
+                >
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-printer-fill fs-5 me-2.5" :class="selectedPrinter === printer ? 'text-primary' : 'text-muted'"></i>
+                    <span class="small fw-semibold text-dark">{{ printer }}</span>
+                  </div>
+                  <i v-if="selectedPrinter === printer" class="bi bi-check-circle-fill text-primary"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showPrinterModal = false" class="btn-cancel">Batal</button>
+            <button @click="confirmPrinterPair" :disabled="isScanning" class="btn-confirm">Tautkan Perangkat</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -175,6 +269,9 @@ const triggerToast = (msg) => {
   padding: 30px;
   overflow-y: auto;
   height: calc(100vh - 70px);
+}
+.bg-light-primary-mini {
+  background-color: #f0f6ff;
 }
 @media (max-width: 991px) {
   .pengaturan-wrapper {

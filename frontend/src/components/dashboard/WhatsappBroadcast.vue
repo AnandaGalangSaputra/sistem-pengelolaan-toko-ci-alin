@@ -22,6 +22,32 @@ const isSendingBroadcast = ref(false)
 const broadcastProgress = ref(0)
 const showPairModal = ref(false)
 
+const newTodayCustomers = computed(() => {
+  const todayStr = new Date().toDateString()
+  const uniqueContacts = new Map()
+  
+  if (state.transactions) {
+    state.transactions.forEach(t => {
+      let isToday = false
+      if (t.id && t.id > 1000000000000) {
+        isToday = new Date(t.id).toDateString() === todayStr
+      } else {
+        isToday = true
+      }
+      
+      if (isToday && t.customer && t.customer.phone && t.customer.phone.trim() !== '') {
+        const cleanedPhone = t.customer.phone.trim()
+        const cleanedName = (t.customer.name && t.customer.name.trim() !== '') ? t.customer.name.trim() : 'Pelanggan'
+        if (cleanedName.toLowerCase() !== 'umum') {
+          uniqueContacts.set(cleanedPhone, cleanedName)
+        }
+      }
+    })
+  }
+  
+  return Array.from(uniqueContacts.entries()).map(([phone, name]) => ({ phone, name }))
+})
+
 const handleTemplateChange = () => {
   const template = waTemplates.find(t => t.id === selectedTemplateId.value)
   if (template) {
@@ -71,7 +97,9 @@ const sendBroadcast = () => {
         isSendingBroadcast.value = false
         
         const targetLabel = broadcastTarget.value === 'semua' ? 'Semua Pelanggan (152 kontak)' :
-          broadcastTarget.value === 'vip' ? 'Pelanggan VIP (42 kontak)' : 'Uji Coba (Nomor Sendiri)'
+          broadcastTarget.value === 'vip' ? 'Pelanggan VIP (42 kontak)' :
+          broadcastTarget.value === 'pelanggan-baru' ? `Pelanggan Baru Hari Ini (${newTodayCustomers.value.length} kontak)` :
+          'Uji Coba (Nomor Sendiri)'
 
         const templateLabel = waTemplates.find(t => t.id === selectedTemplateId.value)?.title || 'Custom Message'
 
@@ -80,6 +108,12 @@ const sendBroadcast = () => {
         if (broadcastTarget.value === 'test') {
           const testUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(broadcastMessage.value)}`
           window.open(testUrl, '_blank')
+        } else if (broadcastTarget.value === 'pelanggan-baru') {
+          if (newTodayCustomers.value.length > 0) {
+            const firstCust = newTodayCustomers.value[0]
+            const testUrl = `https://wa.me/${firstCust.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(broadcastMessage.value)}`
+            window.open(testUrl, '_blank')
+          }
         }
 
         successToastMsg.value = `Sukses menyebarkan WhatsApp Broadcast ke ${targetLabel}!`
@@ -164,19 +198,26 @@ const sendBroadcast = () => {
           <select v-model="broadcastTarget" class="form-select-style">
             <option value="semua">Semua (152 kontak)</option>
             <option value="vip">Pelanggan VIP (42)</option>
+            <option value="pelanggan-baru">Pelanggan Baru Hari Ini ({{ newTodayCustomers.length }} Kontak)</option>
             <option value="test">Uji Nomor Sendiri</option>
           </select>
         </div>
         <div class="col-6 d-flex align-items-end">
           <button 
             @click="sendBroadcast" 
-            :disabled="isSendingBroadcast || !broadcastMessage.trim() || (!state.waPaired && showPairButton)"
+            :disabled="isSendingBroadcast || !broadcastMessage.trim() || (!state.waPaired && showPairButton) || (broadcastTarget === 'pelanggan-baru' && newTodayCustomers.length === 0)"
             class="btn-send-broadcast w-100"
           >
             <i class="bi bi-whatsapp me-2"></i>
             <span>{{ isSendingBroadcast ? 'Mengirim...' : 'Kirim Broadcast' }}</span>
           </button>
         </div>
+      </div>
+
+      <!-- Customer count warning or helper -->
+      <div v-if="broadcastTarget === 'pelanggan-baru' && newTodayCustomers.length === 0" class="alert alert-info border-0 rounded-3 py-1.5 px-3 mb-3 small animate-fade-in">
+        <i class="bi bi-info-circle-fill me-2 text-info"></i>
+        <span>Belum ada pelanggan baru hari ini yang mencantumkan nomor WhatsApp saat checkout transaksi.</span>
       </div>
 
       <!-- Pairing warning if not paired yet -->

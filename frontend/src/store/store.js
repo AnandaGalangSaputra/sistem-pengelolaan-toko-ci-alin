@@ -127,6 +127,8 @@ export const state = reactive({
     { time: 'Kemarin, 08:15', template: 'Toko Buka', target: 'Semua Pelanggan (152 kontak)' }
   ]),
   currentUser: loadState('toko_alin_user', { name: 'Ananda Galang', role: 'Owner' }), // Role Owner default so they can access everything!
+  printerPaired: loadState('toko_alin_printer_paired', false),
+  printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   searchQuery: ''
 })
 
@@ -158,6 +160,14 @@ watch(() => state.broadcastHistory, (newVal) => {
 watch(() => state.currentUser, (newVal) => {
   localStorage.setItem('toko_alin_user', JSON.stringify(newVal))
 }, { deep: true })
+
+watch(() => state.printerPaired, (newVal) => {
+  localStorage.setItem('toko_alin_printer_paired', JSON.stringify(newVal))
+})
+
+watch(() => state.printerPairedName, (newVal) => {
+  localStorage.setItem('toko_alin_printer_paired_name', JSON.stringify(newVal))
+})
 
 // Helper to determine status based on stock and limit
 const computeStatus = (stock, limit) => {
@@ -234,17 +244,21 @@ export const addDiscount = (item, original, requested) => {
   })
 }
 
-export const addTransaction = (items, total, discountVal) => {
+export const addTransaction = (items, total, discountVal, customer = null) => {
   // Add to transaction history
   const now = new Date()
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-
+  
   state.transactions.unshift({
     id: Date.now(),
     time: timeStr,
     itemsCount: items.reduce((acc, curr) => acc + curr.quantity, 0),
     total: Number(total),
-    discount: Number(discountVal)
+    discount: Number(discountVal),
+    customer: customer ? {
+      name: customer.name || 'Umum',
+      phone: customer.phone || ''
+    } : { name: 'Umum', phone: '' }
   })
 
   // Deduct actual stock for products sold
@@ -274,6 +288,11 @@ export const addTransaction = (items, total, discountVal) => {
 export const pairWA = (paired, phoneNumber = '') => {
   state.waPaired = paired
   state.waPairedNumber = paired ? phoneNumber : ''
+}
+
+export const pairPrinter = (paired, name = '') => {
+  state.printerPaired = paired
+  state.printerPairedName = paired ? name : ''
 }
 
 export const addBroadcastHistory = (templateTitle, targetLabel) => {

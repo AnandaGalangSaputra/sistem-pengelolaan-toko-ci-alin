@@ -112,6 +112,23 @@ const getStockPercent = (prod) => {
   const limitMax = Math.max(prod.limit * 1.5, 15)
   return Math.min(100, (prod.stock / limitMax) * 100)
 }
+
+const onImageUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Ukuran gambar terlalu besar! Harap unggah gambar di bawah 2MB untuk efisiensi penyimpanan.')
+    event.target.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    formImage.value = e.target.result // Base64 data URL
+  }
+  reader.readAsDataURL(file)
+}
 </script>
 
 <template>
@@ -306,8 +323,15 @@ const getStockPercent = (prod) => {
             </div>
 
             <div class="mb-3">
-              <label for="addImage" class="form-label-style">URL Gambar Produk (Opsional)</label>
-              <input type="text" id="addImage" v-model="formImage" class="form-control-style" placeholder="Contoh: https://images.unsplash.com/..." />
+              <label class="form-label-style">Gambar Produk (Unggah dari Lokal)</label>
+              <div class="d-flex align-items-center gap-3">
+                <div class="flex-fill">
+                  <input type="file" @change="onImageUpload" accept="image/*" class="form-control-style" />
+                </div>
+                <div v-if="formImage" class="border rounded bg-light" style="width: 50px; height: 50px; overflow: hidden; flex-shrink: 0;">
+                  <img :src="formImage" class="w-100 h-100 object-fit-cover" />
+                </div>
+              </div>
             </div>
 
             <div class="row g-3 mb-3">
@@ -361,8 +385,15 @@ const getStockPercent = (prod) => {
             </div>
 
             <div class="mb-3">
-              <label for="editImage" class="form-label-style">URL Gambar Produk</label>
-              <input type="text" id="editImage" v-model="formImage" class="form-control-style" />
+              <label class="form-label-style">Gambar Produk (Ganti dari Lokal)</label>
+              <div class="d-flex align-items-center gap-3">
+                <div class="flex-fill">
+                  <input type="file" @change="onImageUpload" accept="image/*" class="form-control-style" />
+                </div>
+                <div v-if="formImage" class="border rounded bg-light" style="width: 50px; height: 50px; overflow: hidden; flex-shrink: 0;">
+                  <img :src="formImage" class="w-100 h-100 object-fit-cover" />
+                </div>
+              </div>
             </div>
 
             <div class="row g-3 mb-3">

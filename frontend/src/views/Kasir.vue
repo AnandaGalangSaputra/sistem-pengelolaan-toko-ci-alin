@@ -69,6 +69,9 @@ const finalTotal = computed(() => {
 // Checkout Modal states
 const showCheckoutModal = ref(false)
 const cashReceived = ref('')
+const customerName = ref('')
+const customerPhone = ref('')
+
 const cashChange = computed(() => {
   if (!cashReceived.value) return 0
   const change = Number(cashReceived.value) - finalTotal.value
@@ -81,6 +84,8 @@ const openCheckout = () => {
     return
   }
   cashReceived.value = ''
+  customerName.value = ''
+  customerPhone.value = ''
   showCheckoutModal.value = true
 }
 
@@ -91,7 +96,10 @@ const completePayment = () => {
   }
 
   // Call store method to commit transaction
-  addTransaction(cart.value, finalTotal.value, Number(discountInput.value || 0))
+  addTransaction(cart.value, finalTotal.value, Number(discountInput.value || 0), {
+    name: customerName.value,
+    phone: customerPhone.value
+  })
   
   // Clear local states
   cart.value = []
@@ -302,6 +310,30 @@ const formatRupiah = (val) => {
             <div class="mb-4 text-center">
               <span class="text-muted small d-block">TOTAL TAGIHAN</span>
               <span class="display-6 fw-bold text-danger">{{ formatRupiah(finalTotal) }}</span>
+            </div>
+
+            <!-- Customer Identity Fields (WhatsApp broadcast logging) -->
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="custName" class="form-label-style">Nama Customer (Opsional)</label>
+                <input 
+                  type="text" 
+                  id="custName" 
+                  v-model="customerName" 
+                  class="form-control-style" 
+                  placeholder="Nama pembeli..."
+                />
+              </div>
+              <div class="col-6">
+                <label for="custPhone" class="form-label-style">No. WhatsApp (Opsional)</label>
+                <input 
+                  type="text" 
+                  id="custPhone" 
+                  v-model="customerPhone" 
+                  class="form-control-style" 
+                  placeholder="Contoh: 0812xxx"
+                />
+              </div>
             </div>
 
             <div class="mb-3">
