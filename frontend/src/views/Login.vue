@@ -1,41 +1,35 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { loginUser } from '../store/store.js'
 import WhatsappButton from '../components/WhatsappButton.vue'
 
 const router = useRouter()
 
-const email = ref('IjazahnyaMana@gmail.com')
+const username = ref('owner')
 const password = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const handleLogin = () => {
+const handleLogin = async () => {
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!email.value || !password.value) {
-    errorMessage.value = 'Silakan isi email dan password Anda.'
+  if (!username.value || !password.value) {
+    errorMessage.value = 'Silakan isi username dan password Anda.'
     return
   }
 
-  // Simple authentication simulation
-  if (email.value === 'IjazahnyaMana@gmail.com') {
-    if (password.value === 'admin123') {
-      successMessage.value = 'Login berhasil sebagai Karyawan!'
-      setTimeout(() => {
-        router.push('/dashboard-karyawan')
-      }, 1000)
-    } else if (password.value === 'owner123') {
-      successMessage.value = 'Login berhasil sebagai Owner!'
-      setTimeout(() => {
-        router.push('/dashboard-owner')
-      }, 1000)
-    } else {
-      errorMessage.value = 'Password salah! (Petunjuk: gunakan "admin123" atau "owner123")'
-    }
+  const result = await loginUser(username.value, password.value)
+
+  if (result.success) {
+    successMessage.value = `Login berhasil sebagai ${result.user.role === 'owner' ? 'Owner' : 'Karyawan'}!`
+    setTimeout(() => {
+      router.push('/dashboard-karyawan')
+    }, 1000)
   } else {
-    errorMessage.value = 'Email atau password salah!'
+    errorMessage.value = result.message
+    // errorMessage.value = `Username atau password salah!`
   }
 }
 </script>
@@ -87,11 +81,12 @@ const handleLogin = () => {
           <!-- Login Form -->
           <form @submit.prevent="handleLogin" novalidate autocomplete="off">
 
-            <!-- Email Field -->
+            <!-- Username Field -->
             <div class="form-group-custom">
               <!-- Note: placeholder=" " is critical for CSS to detect empty state via :placeholder-shown -->
-              <input type="email" id="email" class="form-control-custom" placeholder=" " v-model="email" required />
-              <label for="email" class="form-label-custom">Username / Email</label>
+              <input type="text" id="username" class="form-control-custom" placeholder=" " v-model="username"
+                required />
+              <label for="username" class="form-label-custom">Username</label>
             </div>
 
             <!-- Password Field -->

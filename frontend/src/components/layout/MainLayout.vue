@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
-import { state } from '../../store/store.js'
+import { state, logoutUser } from '../../store/store.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -38,7 +38,8 @@ const changeMenu = (menuId) => {
   else if (menuId === 'akun') router.push('/dashboard-karyawan/akun')
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  await logoutUser()
   router.push('/login')
 }
 </script>

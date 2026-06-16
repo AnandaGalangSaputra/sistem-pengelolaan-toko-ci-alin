@@ -135,7 +135,7 @@ export const state = reactive({
   broadcastHistory: loadState('toko_alin_broadcast_history', [
     { time: 'Kemarin, 08:15', template: 'Toko Buka', target: 'Semua Pelanggan (152 kontak)' }
   ]),
-  currentUser: loadState('toko_alin_user', { name: 'Ananda Galang', role: 'Owner' }), // Role Owner default so they can access everything!
+  currentUser: loadState('toko_alin_user', null),
   printerPaired: loadState('toko_alin_printer_paired', false),
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   searchQuery: ''
@@ -335,4 +335,48 @@ export const deleteCustomer = (id) => {
     return true
   }
   return false
+}
+
+export const loginUser = async (username, password) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      state.currentUser = data.user
+      localStorage.setItem('toko_alin_user', JSON.stringify(data.user))
+      return { success: true, user: data.user }
+    } else {
+      return { success: false, message: data.message || 'Username atau password salah!' }
+    }
+  } catch (error) {
+    console.error('Error logging in:', error)
+    return { success: false, message: 'Gagal menghubungkan ke server backend Laravel!' }
+  }
+}
+
+export const logoutUser = async () => {
+  try {
+    await fetch('http://localhost:8000/api/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+  } catch (error) {
+    console.error('Error logging out from backend:', error)
+  }
+
+  // Clear local session state
+  state.currentUser = null
+  localStorage.removeItem('toko_alin_user')
 }

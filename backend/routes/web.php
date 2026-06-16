@@ -17,4 +17,7 @@ Route::get('/dashboard-karyawan', function () {
 
 Route::get('/logout', [AuthController::class, 'logout']);
 
-
+// API Routes for Vue JS Integration
+Route::post('/api/login', [AuthController::class, 'apiLogin']);
+Route::post('/api/logout', [AuthController::class, 'apiLogout']);
+Route::get('/api/me', [AuthController::class, 'apiMe']);

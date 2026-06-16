@@ -3,23 +3,31 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Disable foreign key checks for truncation (SQLite safe)
+        User::query()->delete();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        User::create([
+            'name' => 'Owner Ce Alin',
+            'username' => 'owner',
+            'password' => Hash::make('owner123'),
+            'role' => 'owner',
+        ]);
+
+        User::create([
+            'name' => 'Karyawan Alin',
+            'username' => 'karyawan',
+            'password' => Hash::make('admin123'),
+            'role' => 'karyawan',
         ]);
     }
 }

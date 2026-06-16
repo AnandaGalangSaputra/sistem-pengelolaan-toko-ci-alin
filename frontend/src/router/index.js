@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { state } from '../store/store.js'
 
 const routes = [
   {
@@ -65,6 +66,18 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const isLoggedIn = state.currentUser && state.currentUser.username
+  
+  if (to.name !== 'Login' && !isLoggedIn) {
+    next({ name: 'Login' })
+  } else if (to.name === 'Login' && isLoggedIn) {
+    next('/dashboard-karyawan')
+  } else {
+    next()
+  }
 })
 
 export default router
