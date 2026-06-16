@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['owner', 'karyawan'])->default('karyawan')->after('password');
+        Schema::create('riwayat_broadcasts', function (Blueprint $table) {
+            $table->id();
+            $table->string('template');
+            $table->string('target');
+            $table->text('pesan');
+            $table->dateTime('tanggal');
+            $table->timestamps();
         });
     }
 
@@ -21,9 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role');
-        });
+        Schema::dropIfExists('riwayat_broadcasts');
     }
 };
-

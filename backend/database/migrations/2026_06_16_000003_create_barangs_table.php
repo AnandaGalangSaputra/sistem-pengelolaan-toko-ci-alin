@@ -12,15 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('barangs', function (Blueprint $table) {
-            $table->id(); // Ini akan menjadi primary key default (bigint)
-            $table->string('kode_barang')->unique(); // Ini string unik
+            $table->id();
+            $table->string('kode_barang')->unique();
             $table->string('nama_barang');
             $table->decimal('harga_beli', 12, 2);
             $table->decimal('harga_jual', 12, 2);
             $table->integer('stok')->default(0);
             $table->integer('stok_minimal')->default(5);
-
-            // PERBAIKAN: Menggunakan foreignId untuk relasi ke tabel raks
+            $table->longText('image')->nullable();
             $table->foreignId('rak_id')->constrained('raks')->cascadeOnDelete();
             $table->timestamps();
         });
