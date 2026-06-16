@@ -6,5 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Rak extends Model
 {
-    //
+    protected $fillable = ['kode_rak', 'nama_rak', 'keterangan'];
+
+    public function barangs()
+    {
+        return $this->hasMany(Barang::class);
+    }
 }

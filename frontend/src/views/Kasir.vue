@@ -89,27 +89,29 @@ const openCheckout = () => {
   showCheckoutModal.value = true
 }
 
-const completePayment = () => {
+const completePayment = async () => {
   if (!cashReceived.value || Number(cashReceived.value) < finalTotal.value) {
     alert('Uang pembayaran tidak mencukupi!')
     return
   }
 
   // Call store method to commit transaction
-  addTransaction(cart.value, finalTotal.value, Number(discountInput.value || 0), {
+  const success = await addTransaction(cart.value, finalTotal.value, Number(discountInput.value || 0), {
     name: customerName.value,
     phone: customerPhone.value
   })
   
-  // Clear local states
-  cart.value = []
-  discountInput.value = 0
-  showCheckoutModal.value = false
+  if (success) {
+    // Clear local states
+    cart.value = []
+    discountInput.value = 0
+    showCheckoutModal.value = false
 
-  successToastMsg.value = 'Transaksi berhasil diselesaikan! Stok barang telah diperbarui secara otomatis.'
-  setTimeout(() => {
-    successToastMsg.value = ''
-  }, 4000)
+    successToastMsg.value = 'Transaksi berhasil diselesaikan! Stok barang telah diperbarui secara otomatis.'
+    setTimeout(() => {
+      successToastMsg.value = ''
+    }, 4000)
+  }
 }
 
 const clearCart = () => {

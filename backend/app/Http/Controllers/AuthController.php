@@ -21,9 +21,9 @@ class AuthController extends Controller
             'password' => $request->password
         ];
 
-        if(Auth::attempt($credentials)){
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            if(Auth::user()->role == 'owner'){
+            if (Auth::user()->role == 'owner') {
                 return redirect('/dashboard-owner');
             }
             return redirect('/dashboard-karyawan');
@@ -59,7 +59,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             $user = Auth::user();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login berhasil!',

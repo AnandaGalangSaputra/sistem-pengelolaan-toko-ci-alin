@@ -38,14 +38,16 @@ const openAddModal = () => {
   showAddModal.value = true
 }
 
-const submitAdd = () => {
+const submitAdd = async () => {
   if (!formName.value || !formRack.value || formPrice.value <= 0) {
     alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
     return
   }
-  addProduct(formName.value, formRack.value, formStock.value, formLimit.value, formPrice.value, formImage.value)
-  showAddModal.value = false
-  triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
+  const success = await addProduct(formName.value, formRack.value, formStock.value, formLimit.value, formPrice.value, formImage.value)
+  if (success) {
+    showAddModal.value = false
+    triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
+  }
 }
 
 const openEditModal = (product) => {
@@ -59,7 +61,7 @@ const openEditModal = (product) => {
   showEditModal.value = true
 }
 
-const submitEdit = () => {
+const submitEdit = async () => {
   if (!selectedProd.value) return
   if (!formName.value || !formRack.value || formPrice.value <= 0) {
     alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
@@ -75,15 +77,17 @@ const submitEdit = () => {
     image: formImage.value
   }
 
-  if (editProduct(selectedProd.value.id, updated)) {
+  const success = await editProduct(selectedProd.value.id, updated)
+  if (success) {
     showEditModal.value = false
     triggerToast(`Produk "${formName.value}" berhasil diperbarui!`)
   }
 }
 
-const confirmDelete = (product) => {
+const confirmDelete = async (product) => {
   if (confirm(`Apakah Anda yakin ingin menghapus produk "${product.name}"?`)) {
-    if (deleteProduct(product.id)) {
+    const success = await deleteProduct(product.id)
+    if (success) {
       triggerToast(`Produk "${product.name}" telah dihapus!`)
     }
   }
@@ -167,7 +171,7 @@ const onImageUpload = (event) => {
           </button>
         </div>
 
-        <button @click="openAddModal" class="btn btn-primary-custom">
+        <button @click="openAddModal" class="btn btn-primary-custom" v-if="state.currentUser?.role === 'owner'">
           <i class="bi bi-plus-lg me-2"></i>
           <span>Tambah Produk</span>
         </button>
@@ -225,7 +229,7 @@ const onImageUpload = (event) => {
                 </div>
 
                 <!-- Card Actions Row -->
-                <div class="d-flex gap-2 border-top pt-3">
+                <div class="d-flex gap-2 border-top pt-3" v-if="state.currentUser?.role === 'owner'">
                   <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom flex-fill btn-sm py-1.5 px-2">
                     <i class="bi bi-pencil-square me-1"></i>Edit
                   </button>
@@ -257,7 +261,7 @@ const onImageUpload = (event) => {
               <th>Harga Jual</th>
               <th>Stok Tersedia</th>
               <th>Status</th>
-              <th style="width: 150px;" class="text-center">Aksi</th>
+              <th style="width: 150px;" class="text-center" v-if="state.currentUser?.role === 'owner'">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -281,7 +285,7 @@ const onImageUpload = (event) => {
                   {{ prod.status }}
                 </span>
               </td>
-              <td>
+              <td v-if="state.currentUser?.role === 'owner'">
                 <div class="d-flex justify-content-center gap-2">
                   <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom btn-sm py-1 px-2.5">
                     <i class="bi bi-pencil-square me-1"></i>Edit
@@ -293,7 +297,7 @@ const onImageUpload = (event) => {
               </td>
             </tr>
             <tr v-if="filteredProducts.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
+              <td :colspan="state.currentUser?.role === 'owner' ? 7 : 6" class="text-center py-5 text-muted">
                 <i class="bi bi-search d-block fs-2 mb-2 text-secondary"></i>
                 <span>Tidak menemukan produk yang cocok dengan pencarian Anda.</span>
               </td>
@@ -337,7 +341,7 @@ const onImageUpload = (event) => {
             <div class="row g-3 mb-3">
               <div class="col-6">
                 <label for="addRack" class="form-label-style">Lokasi Rak</label>
-                <input type="text" id="addRack" v-model="formRack" class="form-control-style" placeholder="Contoh: Rak B-3" />
+                <input type="text" id="addRack" v-model="formRack" list="rackList" class="form-control-style" placeholder="Contoh: Rak B-3" />
               </div>
               <div class="col-6">
                 <label for="addPrice" class="form-label-style">Harga Jual (Rp)</label>
@@ -399,7 +403,7 @@ const onImageUpload = (event) => {
             <div class="row g-3 mb-3">
               <div class="col-6">
                 <label for="editRack" class="form-label-style">Lokasi Rak</label>
-                <input type="text" id="editRack" v-model="formRack" class="form-control-style" />
+                <input type="text" id="editRack" v-model="formRack" list="rackList" class="form-control-style" />
               </div>
               <div class="col-6">
                 <label for="editPrice" class="form-label-style">Harga Jual (Rp)</label>
@@ -426,6 +430,11 @@ const onImageUpload = (event) => {
         </div>
       </div>
     </transition>
+
+    <!-- Datalist for rack suggestions -->
+    <datalist id="rackList">
+      <option v-for="r in state.racks" :key="r.id" :value="r.nama_rak" />
+    </datalist>
   </div>
 </template>
 

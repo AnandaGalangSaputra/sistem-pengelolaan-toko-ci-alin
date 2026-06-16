@@ -38,8 +38,9 @@ const openRestockModal = (product) => {
 }
 
 // Perform restock action
-const submitRestock = (productId, amount) => {
-  if (restockProduct(productId, amount)) {
+const submitRestock = async (productId, amount) => {
+  const success = await restockProduct(productId, amount)
+  if (success) {
     const prod = state.products.find(p => p.id === productId)
     successToastMsg.value = `Berhasil merestok ${prod.name} sebanyak ${amount} unit di ${prod.rack}!`
     setTimeout(() => {

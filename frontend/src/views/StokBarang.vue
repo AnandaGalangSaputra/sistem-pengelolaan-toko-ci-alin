@@ -29,8 +29,9 @@ const openRestock = (product) => {
   showRestockModal.value = true
 }
 
-const handleRestockConfirm = (productId, amount) => {
-  if (restockProduct(productId, amount)) {
+const handleRestockConfirm = async (productId, amount) => {
+  const success = await restockProduct(productId, amount)
+  if (success) {
     const prod = state.products.find(p => p.id === productId)
     triggerToast(`Berhasil menambahkan ${amount} unit ke stok "${prod.name}"!`)
   }

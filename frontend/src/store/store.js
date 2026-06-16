@@ -125,8 +125,34 @@ const loadState = (key, defaultVal) => {
   return data ? JSON.parse(data) : defaultVal
 }
 
+const computeStatus = (stock, limit) => {
+  if (stock <= 0) return 'Habis'
+  if (stock < limit / 2) return 'Kritis'
+  if (stock < limit) return 'Menipis'
+  return 'Cukup'
+}
+
+const mapProductFromBackend = (item) => {
+  const stock = Number(item.stok)
+  const limit = Number(item.stok_minimal)
+  return {
+    id: item.id,
+    kode_barang: item.kode_barang,
+    name: item.nama_barang,
+    rack: item.rak ? item.rak.nama_rak : '',
+    rak_id: item.rak_id,
+    stock: stock,
+    limit: limit,
+    price: Number(item.harga_jual),
+    harga_beli: Number(item.harga_beli),
+    image: item.image,
+    status: computeStatus(stock, limit)
+  }
+}
+
 export const state = reactive({
-  products: loadState('toko_alin_products', DEFAULT_PRODUCTS),
+  products: loadState('toko_alin_products', []),
+  racks: [],
   discounts: loadState('toko_alin_discounts', DEFAULT_DISCOUNTS),
   transactions: loadState('toko_alin_transactions', DEFAULT_TRANSACTIONS),
   customers: loadState('toko_alin_customers', DEFAULT_CUSTOMERS),
@@ -140,6 +166,65 @@ export const state = reactive({
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   searchQuery: ''
 })
+
+export const fetchProducts = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/barangs', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.products = resData.data.map(mapProductFromBackend)
+    }
+  } catch (error) {
+    console.error('Error fetching products:', error)
+  }
+}
+
+export const fetchRacks = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/raks', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.racks = resData.data
+    }
+  } catch (error) {
+    console.error('Error fetching racks:', error)
+  }
+}
+
+export const fetchTransactions = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/transaksi', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.transactions = resData.data.map(item => {
+        const dateObj = new Date(item.tanggal)
+        const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
+        const itemsCount = item.details ? item.details.reduce((sum, d) => sum + d.qty, 0) : 0
+        return {
+          id: item.id,
+          kode_transaksi: item.kode_transaksi,
+          time: timeStr,
+          date: item.tanggal,
+          itemsCount: itemsCount,
+          total: Number(item.grand_total),
+          discount: Number(item.total_diskon),
+          customer: {
+            name: item.nama_pelanggan || 'Umum',
+            phone: item.no_telp_pelanggan || ''
+          }
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching transactions:', error)
+  }
+}
 
 // Watchers to persist state changes to localStorage
 watch(() => state.products, (newVal) => {
@@ -182,66 +267,127 @@ watch(() => state.printerPairedName, (newVal) => {
   localStorage.setItem('toko_alin_printer_paired_name', JSON.stringify(newVal))
 })
 
-// Helper to determine status based on stock and limit
-const computeStatus = (stock, limit) => {
-  if (stock <= 0) return 'Habis'
-  if (stock < limit / 2) return 'Kritis'
-  if (stock < limit) return 'Menipis'
-  return 'Cukup'
-}
-
-// State Mutation helpers
-export const restockProduct = (productId, amount) => {
-  const prod = state.products.find(p => p.id === productId)
-  if (prod) {
-    prod.stock += amount
-    prod.status = computeStatus(prod.stock, prod.limit)
-    return true
-  }
-  return false
-}
-
-export const addProduct = (name, rack, stock, limit, price, image = '') => {
-  const newId = state.products.length ? Math.max(...state.products.map(p => p.id)) + 1 : 1
-  const status = computeStatus(stock, limit)
-  state.products.push({
-    id: newId,
-    name,
-    rack,
-    stock: Number(stock),
-    limit: Number(limit),
-    price: Number(price),
-    status,
-    image: image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=60'
-  })
-}
-
-export const editProduct = (id, updatedData) => {
-  const idx = state.products.findIndex(p => p.id === id)
-  if (idx !== -1) {
-    const stock = Number(updatedData.stock)
-    const limit = Number(updatedData.limit)
-    state.products[idx] = {
-      ...state.products[idx],
-      ...updatedData,
-      stock,
-      limit,
-      price: Number(updatedData.price),
-      status: computeStatus(stock, limit),
-      image: updatedData.image || state.products[idx].image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=60'
+// State Mutation helpers (calling Backend REST APIs)
+export const restockProduct = async (productId, amount) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/barangs/${productId}/restock`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ amount: Number(amount) })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.products.findIndex(p => p.id === productId)
+      if (idx !== -1) {
+        state.products[idx] = mapProductFromBackend(resData.data)
+      }
+      return true
+    } else {
+      alert(resData.message || 'Gagal merestok produk.')
+      return false
     }
-    return true
+  } catch (error) {
+    console.error('Error restocking product:', error)
+    alert('Terjadi kesalahan jaringan saat merestok produk!')
+    return false
   }
-  return false
 }
 
-export const deleteProduct = (id) => {
-  const idx = state.products.findIndex(p => p.id === id)
-  if (idx !== -1) {
-    state.products.splice(idx, 1)
-    return true
+export const addProduct = async (name, rack, stock, limit, price, image = '') => {
+  try {
+    const response = await fetch('http://localhost:8000/api/barangs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ name, rack, stock: Number(stock), limit: Number(limit), price: Number(price), image })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const mapped = mapProductFromBackend(resData.data)
+      state.products.push(mapped)
+      fetchRacks()
+      return true
+    } else {
+      alert(resData.message || 'Gagal menambahkan produk.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error adding product:', error)
+    alert('Terjadi kesalahan jaringan saat menambahkan produk!')
+    return false
   }
-  return false
+}
+
+export const editProduct = async (id, updatedData) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/barangs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        name: updatedData.name,
+        rack: updatedData.rack,
+        stock: Number(updatedData.stock),
+        limit: Number(updatedData.limit),
+        price: Number(updatedData.price),
+        image: updatedData.image
+      })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.products.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        state.products[idx] = mapProductFromBackend(resData.data)
+      }
+      fetchRacks()
+      return true
+    } else {
+      alert(resData.message || 'Gagal mengubah produk.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error editing product:', error)
+    alert('Terjadi kesalahan jaringan saat mengubah produk!')
+    return false
+  }
+}
+
+export const deleteProduct = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/barangs/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.products.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        state.products.splice(idx, 1)
+      }
+      fetchRacks()
+      return true
+    } else {
+      alert(resData.message || 'Gagal menghapus produk.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error deleting product:', error)
+    alert('Terjadi kesalahan jaringan saat menghapus produk!')
+    return false
+  }
 }
 
 export const addDiscount = (item, original, requested) => {
@@ -257,44 +403,58 @@ export const addDiscount = (item, original, requested) => {
   })
 }
 
-export const addTransaction = (items, total, discountVal, customer = null) => {
-  // Add to transaction history
-  const now = new Date()
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  
-  state.transactions.unshift({
-    id: Date.now(),
-    time: timeStr,
-    itemsCount: items.reduce((acc, curr) => acc + curr.quantity, 0),
-    total: Number(total),
-    discount: Number(discountVal),
-    customer: customer ? {
-      name: customer.name || 'Umum',
-      phone: customer.phone || ''
-    } : { name: 'Umum', phone: '' }
-  })
-
-  // Deduct actual stock for products sold
-  items.forEach(item => {
-    const prod = state.products.find(p => p.id === item.product.id)
-    if (prod) {
-      prod.stock = Math.max(0, prod.stock - item.quantity)
-      prod.status = computeStatus(prod.stock, prod.limit)
+export const addTransaction = async (items, total, discountVal, customer = null) => {
+  try {
+    const payload = {
+      cart: items.map(item => ({
+        product: { id: item.product.id },
+        quantity: item.quantity
+      })),
+      total_harga: Number(total) + Number(discountVal),
+      total_diskon: Number(discountVal),
+      grand_total: Number(total),
+      customer: customer ? {
+        name: customer.name || '',
+        phone: customer.phone || ''
+      } : null
     }
-  })
 
-  // If there was a discount applied, let's record it in discounts history too for visual feed
-  if (discountVal > 0) {
-    const itemNames = items.map(i => `${i.product.name} (x${i.quantity})`).join(', ')
-    state.discounts.unshift({
-      id: Date.now(),
-      item: itemNames.length > 30 ? itemNames.slice(0, 27) + '...' : itemNames,
-      original: Number(total) + Number(discountVal),
-      requested: Number(total),
-      discountAmount: Number(discountVal),
-      time: 'Baru saja',
-      status: 'Aktif'
+    const response = await fetch('http://localhost:8000/api/transaksi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
     })
+
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      fetchProducts()
+      fetchTransactions()
+
+      if (discountVal > 0) {
+        const itemNames = items.map(i => `${i.product.name} (x${i.quantity})`).join(', ')
+        state.discounts.unshift({
+          id: Date.now(),
+          item: itemNames.length > 30 ? itemNames.slice(0, 27) + '...' : itemNames,
+          original: Number(total) + Number(discountVal),
+          requested: Number(total),
+          discountAmount: Number(discountVal),
+          time: 'Baru saja',
+          status: 'Aktif'
+        })
+      }
+      return true
+    } else {
+      alert(resData.message || 'Gagal menyimpan transaksi.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error adding transaction:', error)
+    alert('Terjadi kesalahan jaringan saat menyimpan transaksi!')
+    return false
   }
 }
 
@@ -345,6 +505,7 @@ export const loginUser = async (username, password) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({ username, password })
     })
 
@@ -353,6 +514,10 @@ export const loginUser = async (username, password) => {
     if (response.ok && data.success) {
       state.currentUser = data.user
       localStorage.setItem('toko_alin_user', JSON.stringify(data.user))
+      // Load backend products, racks, and transactions upon successful login
+      fetchProducts()
+      fetchRacks()
+      fetchTransactions()
       return { success: true, user: data.user }
     } else {
       return { success: false, message: data.message || 'Username atau password salah!' }
@@ -370,7 +535,8 @@ export const logoutUser = async () => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-      }
+      },
+      credentials: 'include'
     })
   } catch (error) {
     console.error('Error logging out from backend:', error)
@@ -379,4 +545,7 @@ export const logoutUser = async () => {
   // Clear local session state
   state.currentUser = null
   localStorage.removeItem('toko_alin_user')
+  state.products = []
+  state.racks = []
+  state.transactions = []
 }

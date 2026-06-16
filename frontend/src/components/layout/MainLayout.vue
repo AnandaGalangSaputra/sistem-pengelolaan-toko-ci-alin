@@ -1,12 +1,20 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
-import { state, logoutUser } from '../../store/store.js'
+import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions } from '../../store/store.js'
 
 const router = useRouter()
 const route = useRoute()
+
+onMounted(() => {
+  if (state.currentUser) {
+    fetchProducts()
+    fetchRacks()
+    fetchTransactions()
+  }
+})
 
 const employeeName = computed(() => state.currentUser.name)
 const employeeRole = computed(() => {
