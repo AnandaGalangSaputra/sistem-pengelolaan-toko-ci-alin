@@ -106,7 +106,7 @@ watch(() => state.customers.length, () => {
   currentCustomerPage.value = 1
 })
 
-const handleAddCustomerSubmit = () => {
+const handleAddCustomerSubmit = async () => {
   if (!newCustName.value.trim() || !newCustPhone.value.trim()) {
     alert('Nama dan Nomor WhatsApp wajib diisi!')
     return
@@ -124,25 +124,28 @@ const handleAddCustomerSubmit = () => {
     cleanPhone = '62' + cleanPhone
   }
   
-  addCustomer(newCustName.value.trim(), cleanPhone, newCustType.value)
-  
-  newCustName.value = ''
-  newCustPhone.value = ''
-  newCustType.value = 'Reguler'
-  
-  successToastMsg.value = 'Pelanggan baru berhasil ditambahkan!'
-  setTimeout(() => {
-    successToastMsg.value = ''
-  }, 3000)
-}
-
-const handleDeleteCustomer = (id, name) => {
-  if (confirm(`Apakah Anda yakin ingin menghapus pelanggan "${name}" dari list broadcast?`)) {
-    deleteCustomer(id)
-    successToastMsg.value = `Pelanggan "${name}" berhasil dihapus.`
+  const success = await addCustomer(newCustName.value.trim(), cleanPhone, newCustType.value)
+  if (success) {
+    newCustName.value = ''
+    newCustPhone.value = ''
+    newCustType.value = 'Reguler'
+    
+    successToastMsg.value = 'Pelanggan baru berhasil ditambahkan!'
     setTimeout(() => {
       successToastMsg.value = ''
     }, 3000)
+  }
+}
+
+const handleDeleteCustomer = async (id, name) => {
+  if (confirm(`Apakah Anda yakin ingin menghapus pelanggan "${name}" dari list broadcast?`)) {
+    const success = await deleteCustomer(id)
+    if (success) {
+      successToastMsg.value = `Pelanggan "${name}" berhasil dihapus.`
+      setTimeout(() => {
+        successToastMsg.value = ''
+      }, 3000)
+    }
   }
 }
 
@@ -242,8 +245,10 @@ const sendBroadcast = async () => {
   isSendingBroadcast.value = true
   broadcastProgress.value = 0
 
+  const templateLabel = waTemplates.find(t => t.id === selectedTemplateId.value)?.title || 'Custom Message'
+
   // Call the backend API to trigger broadcast sending
-  const success = await sendWABroadcast(broadcastMessage.value, targetNumbers)
+  const success = await sendWABroadcast(broadcastMessage.value, targetNumbers, templateLabel, targetLabel)
 
   if (success) {
     // Simulate progress bar based on 2 seconds delay per number
@@ -258,9 +263,6 @@ const sendBroadcast = async () => {
         clearInterval(interval)
         setTimeout(() => {
           isSendingBroadcast.value = false
-
-          const templateLabel = waTemplates.find(t => t.id === selectedTemplateId.value)?.title || 'Custom Message'
-          addBroadcastHistory(templateLabel, targetLabel)
 
           successToastMsg.value = `Sukses menyebarkan WhatsApp Broadcast ke ${targetLabel}!`
           setTimeout(() => {

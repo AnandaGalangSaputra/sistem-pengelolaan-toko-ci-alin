@@ -135,4 +135,61 @@ class TransaksiController extends Controller
             ], 400);
         }
     }
+
+    /**
+     * Get all customers from database.
+     */
+    public function customers()
+    {
+        $customers = Customer::orderBy('nama', 'asc')->get();
+        return response()->json([
+            'success' => true,
+            'data' => $customers
+        ]);
+    }
+
+    /**
+     * Store a new customer in database.
+     */
+    public function storeCustomer(Request $request)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'no_telp' => 'required|string|max:20|unique:customers,no_telp',
+            'tipe' => 'nullable|in:VIP,Reguler'
+        ]);
+
+        $customer = Customer::create([
+            'nama' => trim($request->nama),
+            'no_telp' => trim($request->no_telp),
+            'tipe' => $request->tipe ?? 'Reguler'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer berhasil ditambahkan!',
+            'data' => $customer
+        ]);
+    }
+
+    /**
+     * Delete a customer from database.
+     */
+    public function destroyCustomer($id)
+    {
+        $customer = Customer::find($id);
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer tidak ditemukan!'
+            ], 404);
+        }
+
+        $customer->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer berhasil dihapus!'
+        ]);
+    }
 }

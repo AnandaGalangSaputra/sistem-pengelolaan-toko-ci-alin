@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 class WhatsappController extends Controller
 {
@@ -75,7 +76,9 @@ class WhatsappController extends Controller
     {
         $request->validate([
             'message' => 'required|string',
-            'numbers' => 'required|array|min:1'
+            'numbers' => 'required|array|min:1',
+            'template' => 'nullable|string',
+            'target' => 'nullable|string'
         ]);
 
         try {
@@ -84,12 +87,52 @@ class WhatsappController extends Controller
                 'numbers' => $request->numbers
             ]);
             
-            return response()->json($response->json(), $response->status());
+            $resData = $response->json();
+            if ($response->successful() && isset($resData['success']) && $resData['success']) {
+                // Save log to sqlite database
+                DB::table('riwayat_broadcasts')->insert([
+                    'template' => $request->template ?? 'Custom Message',
+                    'target' => $request->target ?? (count($request->numbers) . ' kontak'),
+                    'pesan' => $request->message,
+                    'tanggal' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+            
+            return response()->json($resData, $response->status());
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengirim broadcast. WhatsApp Gateway Node.js tidak merespons.'
             ], 500);
         }
+    }
+
+    /**
+     * Get broadcast history from database.
+     */
+    public function history()
+    {
+        $history = DB::table('riwayat_broadcasts')
+            ->orderBy('id', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                // Format tanggal to Indonesian readable text
+                $dateObj = new \DateTime($item->tanggal);
+                return [
+                    'id' => $item->id,
+                    'template' => $item->template,
+                    'target' => $item->target,
+                    'pesan' => $item->pesan,
+                    'time' => $dateObj->format('d/m/Y H:i')
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $history
+        ]);
     }
 }

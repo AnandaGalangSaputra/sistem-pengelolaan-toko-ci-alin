@@ -163,17 +163,15 @@ const mapProductFromBackend = (item) => {
 }
 
 export const state = reactive({
-  products: loadState('toko_alin_products', []),
+  products: [],
   racks: [],
   selectedRackId: null,
-  discounts: loadState('toko_alin_discounts', DEFAULT_DISCOUNTS),
-  transactions: loadState('toko_alin_transactions', DEFAULT_TRANSACTIONS),
-  customers: loadState('toko_alin_customers', DEFAULT_CUSTOMERS),
+  discounts: [],
+  transactions: [],
+  customers: [],
   waPaired: loadState('toko_alin_wa_paired', false),
   waPairedNumber: loadState('toko_alin_wa_paired_number', ''),
-  broadcastHistory: loadState('toko_alin_broadcast_history', [
-    { time: 'Kemarin, 08:15', template: 'Toko Buka', target: 'Semua Pelanggan (152 kontak)' }
-  ]),
+  broadcastHistory: [],
   currentUser: loadState('toko_alin_user', null),
   printerPaired: loadState('toko_alin_printer_paired', false),
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
@@ -357,22 +355,6 @@ export const deleteRack = async (id) => {
 }
 
 // Watchers to persist state changes to localStorage
-watch(() => state.products, (newVal) => {
-  localStorage.setItem('toko_alin_products', JSON.stringify(newVal))
-}, { deep: true })
-
-watch(() => state.customers, (newVal) => {
-  localStorage.setItem('toko_alin_customers', JSON.stringify(newVal))
-}, { deep: true })
-
-watch(() => state.discounts, (newVal) => {
-  localStorage.setItem('toko_alin_discounts', JSON.stringify(newVal))
-}, { deep: true })
-
-watch(() => state.transactions, (newVal) => {
-  localStorage.setItem('toko_alin_transactions', JSON.stringify(newVal))
-}, { deep: true })
-
 watch(() => state.waPaired, (newVal) => {
   localStorage.setItem('toko_alin_wa_paired', JSON.stringify(newVal))
 })
@@ -380,10 +362,6 @@ watch(() => state.waPaired, (newVal) => {
 watch(() => state.waPairedNumber, (newVal) => {
   localStorage.setItem('toko_alin_wa_paired_number', JSON.stringify(newVal))
 })
-
-watch(() => state.broadcastHistory, (newVal) => {
-  localStorage.setItem('toko_alin_broadcast_history', JSON.stringify(newVal))
-}, { deep: true })
 
 watch(() => state.currentUser, (newVal) => {
   localStorage.setItem('toko_alin_user', JSON.stringify(newVal))
@@ -634,7 +612,7 @@ export const disconnectWA = async () => {
   return false
 }
 
-export const sendWABroadcast = async (message, numbers) => {
+export const sendWABroadcast = async (message, numbers, template = '', target = '') => {
   try {
     const response = await fetch('http://localhost:8000/api/whatsapp/broadcast', {
       method: 'POST',
@@ -643,9 +621,12 @@ export const sendWABroadcast = async (message, numbers) => {
         'Accept': 'application/json'
       },
       credentials: 'include',
-      body: JSON.stringify({ message, numbers })
+      body: JSON.stringify({ message, numbers, template, target })
     })
     const resData = await response.json()
+    if (resData.success) {
+      fetchBroadcastHistory()
+    }
     return resData.success
   } catch (error) {
     console.error('Error sending WhatsApp broadcast:', error)
@@ -668,23 +649,88 @@ export const addBroadcastHistory = (templateTitle, targetLabel) => {
   })
 }
 
-export const addCustomer = (name, phone, type = 'Reguler') => {
-  const newId = state.customers.length ? Math.max(...state.customers.map(c => c.id)) + 1 : 1
-  state.customers.push({
-    id: newId,
-    name,
-    phone,
-    type
-  })
+export const fetchCustomers = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/customers', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.customers = resData.data.map(c => ({
+        id: c.id,
+        name: c.nama,
+        phone: c.no_telp,
+        type: c.tipe
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching customers:', error)
+  }
 }
 
-export const deleteCustomer = (id) => {
-  const idx = state.customers.findIndex(c => c.id === id)
-  if (idx !== -1) {
-    state.customers.splice(idx, 1)
-    return true
+export const fetchBroadcastHistory = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/whatsapp/history', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.broadcastHistory = resData.data
+    }
+  } catch (error) {
+    console.error('Error fetching broadcast history:', error)
   }
-  return false
+}
+
+export const addCustomer = async (name, phone, type = 'Reguler') => {
+  try {
+    const response = await fetch('http://localhost:8000/api/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ nama: name, no_telp: phone, tipe: type })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      await fetchCustomers()
+      return true
+    } else {
+      alert(resData.message || 'Gagal menambahkan customer.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error adding customer:', error)
+    return false
+  }
+}
+
+export const deleteCustomer = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/customers/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.customers.findIndex(c => c.id === id)
+      if (idx !== -1) {
+        state.customers.splice(idx, 1)
+      }
+      return true
+    } else {
+      alert(resData.message || 'Gagal menghapus customer.')
+      return false
+    }
+  } catch (error) {
+    console.error('Error deleting customer:', error)
+    return false
+  }
 }
 
 export const loginUser = async (username, password) => {
@@ -704,10 +750,12 @@ export const loginUser = async (username, password) => {
     if (response.ok && data.success) {
       state.currentUser = data.user
       localStorage.setItem('toko_alin_user', JSON.stringify(data.user))
-      // Load backend products, racks, and transactions upon successful login
+      // Load backend products, racks, transactions, customers, and broadcast history upon successful login
       fetchProducts()
       fetchRacks()
       fetchTransactions()
+      fetchCustomers()
+      fetchBroadcastHistory()
       return { success: true, user: data.user }
     } else {
       return { success: false, message: data.message || 'Username atau password salah!' }
@@ -739,4 +787,6 @@ export const logoutUser = async () => {
   state.racks = []
   state.selectedRackId = null
   state.transactions = []
+  state.customers = []
+  state.broadcastHistory = []
 }

@@ -35,7 +35,12 @@ Route::post('/api/barangs/{id}/restock', [App\Http\Controllers\BarangController:
 Route::get('/api/transaksi', [App\Http\Controllers\TransaksiController::class, 'index']);
 Route::post('/api/transaksi', [App\Http\Controllers\TransaksiController::class, 'store']);
 
+Route::get('/api/customers', [App\Http\Controllers\TransaksiController::class, 'customers']);
+Route::post('/api/customers', [App\Http\Controllers\TransaksiController::class, 'storeCustomer']);
+Route::delete('/api/customers/{id}', [App\Http\Controllers\TransaksiController::class, 'destroyCustomer']);
+
 Route::get('/api/whatsapp/status', [App\Http\Controllers\WhatsappController::class, 'status']);
 Route::get('/api/whatsapp/qr', [App\Http\Controllers\WhatsappController::class, 'qr']);
 Route::post('/api/whatsapp/disconnect', [App\Http\Controllers\WhatsappController::class, 'disconnect']);
 Route::post('/api/whatsapp/broadcast', [App\Http\Controllers\WhatsappController::class, 'broadcast']);
+Route::get('/api/whatsapp/history', [App\Http\Controllers\WhatsappController::class, 'history']);
