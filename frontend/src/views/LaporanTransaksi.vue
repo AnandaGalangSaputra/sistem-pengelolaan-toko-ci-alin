@@ -10,24 +10,43 @@ const formatRupiah = (val) => {
 const transactionsList = computed(() => state.transactions)
 
 const totalRevenue = computed(() => {
-  const simRevenue = state.transactions.reduce((acc, tx) => acc + tx.total, 0)
-  return 2450000 + simRevenue // Baseline 2.45M + new sales
+  return state.transactions.reduce((acc, tx) => acc + tx.total, 0)
 })
 
 const totalDiscounts = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.discount, 0) + 15000 // Baseline 15k + new discounts
+  return state.transactions.reduce((acc, tx) => acc + tx.discount, 0)
 })
 
-const totalTransactionsCount = computed(() => state.transactions.length + 42) // Baseline 42 + new sales
+const totalTransactionsCount = computed(() => {
+  return state.transactions.length
+})
 
 const totalItemsSold = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.itemsCount, 0) + 112 // Baseline 112 + new sales
+  return state.transactions.reduce((acc, tx) => acc + tx.itemsCount, 0)
 })
 
 const avgTransactionValue = computed(() => {
   if (totalTransactionsCount.value === 0) return 0
   return totalRevenue.value / totalTransactionsCount.value
 })
+
+// Calculate total cost of goods sold (HPP)
+const totalCogs = computed(() => {
+  return state.transactions.reduce((acc, tx) => {
+    const txCogs = tx.details ? tx.details.reduce((sum, d) => sum + (d.barang ? d.barang.harga_beli * d.qty : 0), 0) : 0
+    return acc + txCogs
+  }, 0)
+})
+
+// Calculate net profit or loss
+const netProfit = computed(() => {
+  return totalRevenue.value - totalCogs.value
+})
+
+// Helper to calculate HPP per transaction
+const getTransactionCogs = (tx) => {
+  return tx.details ? tx.details.reduce((sum, d) => sum + (d.barang ? d.barang.harga_beli * d.qty : 0), 0) : 0
+}
 
 // Target achievement percentage and editing state
 const isEditingTarget = ref(false)
@@ -181,14 +200,15 @@ watch(() => state.transactions.length, () => {
 
     <!-- Stats Cards -->
     <div class="row g-4 mb-4">
-      <div class="col-12 col-md-3">
+      <!-- Card 1: Total Omset -->
+      <div class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
             <div class="card-icon-container icon-success">
               <i class="bi bi-wallet-fill text-success"></i>
             </div>
             <div class="card-info">
-              <span class="card-label">Total Omset Hari Ini</span>
+              <span class="card-label">Total Omset</span>
               <span class="card-value text-success">{{ formatRupiah(totalRevenue) }}</span>
             </div>
             <div class="card-bottom text-muted">
@@ -198,7 +218,44 @@ watch(() => state.transactions.length, () => {
         </div>
       </div>
 
-      <div class="col-12 col-md-3">
+      <!-- Card 2: Total HPP -->
+      <div class="col-12 col-md-6 col-lg-4 col-xl">
+        <div class="metrics-card">
+          <div class="card-body">
+            <div class="card-icon-container text-secondary" style="background-color: #f1f5f9; color: #475569;">
+              <i class="bi bi-tags-fill"></i>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Total HPP (Harga Pokok)</span>
+              <span class="card-value text-secondary">{{ formatRupiah(totalCogs) }}</span>
+            </div>
+            <div class="card-bottom text-muted">
+              <span>Biaya modal barang terjual</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Keuntungan / Kerugian Bersih -->
+      <div class="col-12 col-md-6 col-lg-4 col-xl">
+        <div class="metrics-card">
+          <div class="card-body">
+            <div class="card-icon-container" :class="netProfit >= 0 ? 'icon-success' : 'icon-warning'" :style="netProfit >= 0 ? '' : 'background-color: #fef2f2; color: #dc2626;'">
+              <i class="bi" :class="netProfit >= 0 ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow'"></i>
+            </div>
+            <div class="card-info">
+              <span class="card-label">{{ netProfit >= 0 ? 'Keuntungan Bersih' : 'Kerugian Bersih' }}</span>
+              <span class="card-value" :class="netProfit >= 0 ? 'text-success' : 'text-danger'">{{ formatRupiah(Math.abs(netProfit)) }}</span>
+            </div>
+            <div class="card-bottom" :class="netProfit >= 0 ? 'text-success' : 'text-danger'">
+              <span>{{ netProfit >= 0 ? 'Status surplus keuntungan' : 'Status defisit kerugian' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Jumlah Transaksi -->
+      <div class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
             <div class="card-icon-container text-primary" style="background-color: #e0f2fe; color: #0284c7;">
@@ -215,24 +272,8 @@ watch(() => state.transactions.length, () => {
         </div>
       </div>
 
-      <div class="col-12 col-md-3">
-        <div class="metrics-card">
-          <div class="card-body">
-            <div class="card-icon-container" style="background-color: #fef3c7; color: #d97706;">
-              <i class="bi bi-cart-check-fill"></i>
-            </div>
-            <div class="card-info">
-              <span class="card-label">Barang Terjual</span>
-              <span class="card-value text-dark">{{ totalItemsSold }} unit</span>
-            </div>
-            <div class="card-bottom text-muted">
-              <span>Produk fisik dipotong stok</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-3">
+      <!-- Card 5: Diskon Transaksi -->
+      <div class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
             <div class="card-icon-container icon-warning">
@@ -243,7 +284,7 @@ watch(() => state.transactions.length, () => {
               <span class="card-value text-danger">{{ formatRupiah(totalDiscounts) }}</span>
             </div>
             <div class="card-bottom text-danger">
-              <span>Total potongan harga langsung</span>
+              <span>Total potongan diskon</span>
             </div>
           </div>
         </div>
@@ -323,9 +364,11 @@ watch(() => state.transactions.length, () => {
                 Waktu
                 <i class="bi ms-1" :class="sortBy.startsWith('date') ? (sortBy === 'date-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
+              <th>Petugas</th>
               <th>Nama Pembeli</th>
               <th>Jumlah Item</th>
               <th>Potongan Diskon</th>
+              <th>Keuntungan / Kerugian</th>
               <th @click="toggleSort('total')" style="cursor: pointer; user-select: none;">
                 Total Pembayaran
                 <i class="bi ms-1" :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
@@ -338,6 +381,11 @@ watch(() => state.transactions.length, () => {
               <td class="font-monospace text-muted" style="font-size: 0.82rem;">#TX-{{ tx.id }}</td>
               <td class="fw-semibold text-dark">{{ tx.time }} WIB</td>
               <td>
+                <span class="badge bg-light text-dark border py-1.5 px-2.5 rounded-3 fw-semibold">
+                  <i class="bi bi-person-badge-fill text-primary me-1"></i>{{ tx.cashierName || 'System' }}
+                </span>
+              </td>
+              <td>
                 <span class="fw-bold text-dark">{{ tx.customer?.name || 'Umum' }}</span>
                 <span v-if="tx.customer?.phone" class="text-muted d-block small" style="font-size: 0.75rem;">
                   <i class="bi bi-whatsapp text-success me-1"></i>{{ tx.customer?.phone }}
@@ -345,6 +393,16 @@ watch(() => state.transactions.length, () => {
               </td>
               <td>{{ tx.itemsCount }} unit barang</td>
               <td class="text-danger fw-semibold">{{ tx.discount > 0 ? formatRupiah(tx.discount) : '-' }}</td>
+              <td>
+                <span v-if="tx.total - getTransactionCogs(tx) >= 0" class="text-success fw-semibold small">
+                  <i class="bi bi-arrow-up-right-circle-fill me-1 text-success"></i>
+                  {{ formatRupiah(tx.total - getTransactionCogs(tx)) }}
+                </span>
+                <span v-else class="text-danger fw-semibold small">
+                  <i class="bi bi-arrow-down-right-circle-fill me-1 text-danger"></i>
+                  {{ formatRupiah(Math.abs(tx.total - getTransactionCogs(tx))) }}
+                </span>
+              </td>
               <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
               <td class="text-center">
                 <span class="badge bg-success bg-opacity-10 text-success border border-success py-1.5 px-3 rounded-5" style="font-size: 0.72rem; font-weight: 600;">
@@ -353,7 +411,7 @@ watch(() => state.transactions.length, () => {
               </td>
             </tr>
             <tr v-if="transactionsList.length === 0">
-              <td colspan="7" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
+              <td colspan="9" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
             </tr>
           </tbody>
         </table>
@@ -426,54 +484,47 @@ watch(() => state.transactions.length, () => {
                   <div class="fw-bold" style="font-size: 1.15rem; color: #16a34a;">{{ formatRupiah(totalRevenue) }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="small text-muted mb-0.5">Rata-rata Penjualan</div>
-                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ formatRupiah(avgTransactionValue) }}</div>
+                  <div class="small text-muted mb-0.5">Total HPP (Harga Pokok)</div>
+                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ formatRupiah(totalCogs) }}</div>
+                </div>
+                <div class="col-6 mt-3">
+                  <div class="small text-muted mb-0.5">Keuntungan / Kerugian Bersih</div>
+                  <div class="fw-bold" :style="{ fontSize: '1.15rem', color: netProfit >= 0 ? '#16a34a' : '#dc2626' }">
+                    {{ netProfit >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{ formatRupiah(Math.abs(netProfit)) }}
+                  </div>
                 </div>
                 <div class="col-6 mt-3">
                   <div class="small text-muted mb-0.5">Total Transaksi Selesai</div>
                   <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ totalTransactionsCount }} Transaksi</div>
-                </div>
-                <div class="col-6 mt-3">
-                  <div class="small text-muted mb-0.5">Total Potongan Diskon</div>
-                  <div class="fw-bold text-danger" style="font-size: 1.15rem;">{{ formatRupiah(totalDiscounts) }}</div>
                 </div>
               </div>
 
               <!-- Transactions Table inside PDF -->
               <div class="mt-4">
                 <h6 class="fw-bold mb-2.5 text-dark" style="font-size: 0.85rem;">Rincian Log Transaksi Penjualan</h6>
-                <table class="w-100" style="font-size: 0.78rem; border-collapse: collapse;">
+                <table class="w-100" style="font-size: 0.72rem; border-collapse: collapse;">
                   <thead>
                     <tr style="border-bottom: 2px solid #cbd5e1; border-top: 1px solid #e2e8f0; background-color: #f8fafc;">
-                      <th class="py-2 text-start px-2" style="width: 100px;">ID Transaksi</th>
-                      <th class="py-2 text-start px-2" style="width: 70px;">Waktu</th>
-                      <th class="py-2 text-start px-2">Nama Pelanggan</th>
-                      <th class="py-2 class text-center px-2" style="width: 80px;">Item</th>
-                      <th class="py-2 text-end px-2" style="width: 110px;">Total Bayar</th>
+                      <th class="py-2 text-start px-2" style="width: 80px;">ID Transaksi</th>
+                      <th class="py-2 text-start px-2" style="width: 55px;">Waktu</th>
+                      <th class="py-2 text-start px-2" style="width: 80px;">Petugas</th>
+                      <th class="py-2 text-start px-2">Pelanggan</th>
+                      <th class="py-2 text-center px-2" style="width: 50px;">Item</th>
+                      <th class="py-2 text-end px-2" style="width: 85px;">Untung/Rugi</th>
+                      <th class="py-2 text-end px-2" style="width: 95px;">Total Bayar</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="tx in transactionsList.slice(0, 8)" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
-                      <td class="py-2 px-2 font-monospace text-secondary">#TX-{{ tx.id.toString().slice(-4) }}</td>
+                    <tr v-for="tx in transactionsList" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
+                      <td class="py-2 px-2 font-monospace text-secondary">#TX-{{ tx.id }}</td>
                       <td class="py-2 px-2">{{ tx.time }}</td>
+                      <td class="py-2 px-2 text-dark">{{ tx.cashierName || 'System' }}</td>
                       <td class="py-2 px-2 text-dark">{{ tx.customer?.name || 'Umum' }}</td>
                       <td class="py-2 px-2 text-center">{{ tx.itemsCount }} unit</td>
+                      <td class="py-2 px-2 text-end" :style="{ color: tx.total - getTransactionCogs(tx) >= 0 ? '#16a34a' : '#dc2626', fontWeight: '500' }">
+                        {{ formatRupiah(tx.total - getTransactionCogs(tx)) }}
+                      </td>
                       <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(tx.total) }}</td>
-                    </tr>
-                    <!-- Mock transaction fillers for realistic visual report height -->
-                    <tr v-if="printType === 'bulanan'" style="border-bottom: 1px solid #f1f5f9;">
-                      <td class="py-2 px-2 font-monospace text-secondary">#TX-4402</td>
-                      <td class="py-2 px-2">Kemarin</td>
-                      <td class="py-2 px-2 text-dark">Rudi Hermawan</td>
-                      <td class="py-2 px-2 text-center">3 unit</td>
-                      <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(185000) }}</td>
-                    </tr>
-                    <tr v-if="printType === 'bulanan'" style="border-bottom: 1px solid #f1f5f9;">
-                      <td class="py-2 px-2 font-monospace text-secondary">#TX-4399</td>
-                      <td class="py-2 px-2">Kemarin</td>
-                      <td class="py-2 px-2 text-dark">Siti Aminah</td>
-                      <td class="py-2 px-2 text-center">1 unit</td>
-                      <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(75000) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -482,9 +533,9 @@ watch(() => state.transactions.length, () => {
               <!-- Signatures Row inside PDF -->
               <div class="row mt-5 pt-5 text-center" style="font-size: 0.8rem;">
                 <div class="col-6">
-                  <div class="text-secondary small mb-5">Kasir Toko</div>
-                  <div class="fw-bold text-dark" style="text-decoration: underline;">Ananda Galang</div>
-                  <div class="text-muted small" style="font-size: 0.72rem;">Staff Operasional</div>
+                  <div class="text-secondary small mb-5">Petugas Laporan</div>
+                  <div class="fw-bold text-dark" style="text-decoration: underline;">{{ state.currentUser?.name || 'Ananda Galang' }}</div>
+                  <div class="text-muted small" style="font-size: 0.72rem;">{{ state.currentUser?.role === 'owner' ? 'Owner Toko' : 'Staff Operasional' }}</div>
                 </div>
                 <div class="col-6">
                   <div class="text-secondary small mb-5">Pemilik Toko</div>

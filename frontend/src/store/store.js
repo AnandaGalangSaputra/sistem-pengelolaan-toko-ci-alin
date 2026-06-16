@@ -80,16 +80,28 @@ const DEFAULT_TRANSACTIONS = [
   {
     id: 101,
     time: '12:30',
+    date: '2026-06-16 12:30:00',
     itemsCount: 3,
     total: 210000,
-    discount: 15000
+    discount: 15000,
+    cashierName: 'Ananda Galang',
+    details: [
+      { id: 1, qty: 3, harga: 75000, subtotal: 225000, barang: { id: 1, name: 'Obeng Plus Minus Set', harga_beli: 50000, harga_jual: 75000 } }
+    ],
+    customer: { name: 'Budi Santoso', phone: '081234567890' }
   },
   {
     id: 102,
     time: '13:15',
+    date: '2026-06-16 13:15:00',
     itemsCount: 2,
     total: 145000,
-    discount: 5000
+    discount: 5000,
+    cashierName: 'Ananda Galang',
+    details: [
+      { id: 2, qty: 2, harga: 75000, subtotal: 150000, barang: { id: 5, name: 'Obeng Plus Minus Set', harga_beli: 50000, harga_jual: 75000 } }
+    ],
+    customer: { name: 'Umum', phone: '' }
   }
 ]
 
@@ -207,6 +219,20 @@ export const fetchTransactions = async () => {
         const dateObj = new Date(item.tanggal)
         const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
         const itemsCount = item.details ? item.details.reduce((sum, d) => sum + d.qty, 0) : 0
+        
+        const details = item.details ? item.details.map(d => ({
+          id: d.id,
+          qty: d.qty,
+          harga: Number(d.harga),
+          subtotal: Number(d.subtotal),
+          barang: d.barang ? {
+            id: d.barang.id,
+            name: d.barang.nama_barang,
+            harga_beli: Number(d.barang.harga_beli),
+            harga_jual: Number(d.barang.harga_jual)
+          } : null
+        })) : []
+
         return {
           id: item.id,
           kode_transaksi: item.kode_transaksi,
@@ -215,6 +241,8 @@ export const fetchTransactions = async () => {
           itemsCount: itemsCount,
           total: Number(item.grand_total),
           discount: Number(item.total_diskon),
+          cashierName: item.user ? item.user.name : 'System',
+          details: details,
           customer: {
             name: item.nama_pelanggan || 'Umum',
             phone: item.no_telp_pelanggan || ''

@@ -17,13 +17,34 @@ const filteredLowStockProducts = computed(() => {
   })
 })
 
+const getTodayDateString = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const getStartOfWeek = (d) => {
+  const date = new Date(d)
+  const day = date.getDay()
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1)
+  const start = new Date(date.setDate(diff))
+  start.setHours(0, 0, 0, 0)
+  return start
+}
+
 // Metrics values computed dynamically based on state
 const totalActiveProducts = computed(() => state.products.length)
 const lowStockCount = computed(() => state.products.filter(p => p.stock < p.limit).length)
-const totalTransactionsToday = computed(() => state.transactions.length + 40) // Baseline 40 + simulation transactions
+
+const totalTransactionsToday = computed(() => {
+  const todayStr = getTodayDateString()
+  return state.transactions.filter(tx => tx.date.startsWith(todayStr)).length
+})
+
 const totalRevenueToday = computed(() => {
-  const simRevenue = state.transactions.reduce((acc, tx) => acc + tx.total, 0)
-  return 2450000 + simRevenue // Baseline 2.45M + new sales
+  const todayStr = getTodayDateString()
+  return state.transactions
+    .filter(tx => tx.date.startsWith(todayStr))
+    .reduce((acc, tx) => acc + tx.total, 0)
 })
 
 // Restock Modal state
@@ -78,16 +99,32 @@ const submitDiscountRequest = () => {
 
 // Chart Interactive Data
 const weeklySalesData = computed(() => {
-  const todayTransactionsSales = state.transactions.reduce((acc, tx) => acc + tx.total, 0)
-  return [
-    { day: 'Senin', sales: 1200000, label: 'Rp 1.2M' },
-    { day: 'Selasa', sales: 1800000, label: 'Rp 1.8M' },
-    { day: 'Rabu', sales: 1500000 + todayTransactionsSales, label: formatRupiah(1500000 + todayTransactionsSales) },
-    { day: 'Kamis', sales: 2100000, label: 'Rp 2.1M' },
-    { day: 'Jumat', sales: 2450000, label: 'Rp 2.45M' },
-    { day: 'Sabtu', sales: 3100000, label: 'Rp 3.1M' },
-    { day: 'Minggu', sales: 2900000, label: 'Rp 2.9M' }
-  ]
+  const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+  const dailySales = [0, 0, 0, 0, 0, 0, 0]
+  
+  const now = new Date()
+  const startOfWeek = getStartOfWeek(now)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  state.transactions.forEach(tx => {
+    const txDate = new Date(tx.date)
+    if (txDate >= startOfWeek && txDate <= endOfWeek) {
+      const dayIndex = txDate.getDay()
+      const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1
+      dailySales[adjustedIndex] += tx.total
+    }
+  })
+
+  return days.map((day, idx) => {
+    const sales = dailySales[idx]
+    return {
+      day,
+      sales,
+      label: formatRupiah(sales)
+    }
+  })
 })
 
 const formatRupiah = (val) => {
