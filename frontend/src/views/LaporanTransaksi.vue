@@ -233,7 +233,7 @@ const getShopWa = () => {
 
     <!-- Print Report Preview Modal -->
     <transition name="modal">
-      <div v-if="showPrintModal" class="modal-backdrop-custom d-print-none">
+      <div v-if="showPrintModal" class="modal-backdrop-custom">
         <div class="modal-card-custom animate-fade-in" style="max-width: 680px; height: 90vh;">
           <div class="modal-header-custom border-bottom">
             <h3 class="modal-title-custom">
@@ -366,29 +366,80 @@ const getShopWa = () => {
     padding: 20px;
   }
 }
+</style>
 
-/* Custom Printable CSS rules */
+<style>
+/* Global Printable CSS overrides to hide application shell and isolate report sheet */
 @media print {
   body {
     background-color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
-  /* Hide all dashboard containers and sidebar wrapper in screen during print layout */
-  .dashboard-container, .sidebar, .top-header-main, .laporan-wrapper, .modal-backdrop-custom {
+  
+  /* Hide the sidebar */
+  .sidebar, .sidebar-wrapper, aside {
     display: none !important;
     visibility: hidden !important;
   }
-  /* Display only the printable block area of PDF preview */
-  .printable-report-area {
+  
+  /* Hide the top header */
+  .top-header-main, header {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Hide everything inside laporan-wrapper except the print modal */
+  .laporan-wrapper > *:not(.modal-backdrop-custom) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Hide modal header and footer in the print modal */
+  .modal-backdrop-custom .modal-header-custom,
+  .modal-backdrop-custom .modal-footer-custom {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Ensure the backdrop itself is transparent and has no centering/padding during print */
+  .modal-backdrop-custom {
+    background: transparent !important;
+    padding: 0 !important;
     display: block !important;
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    width: auto !important;
+    z-index: auto !important;
+  }
+  
+  .modal-card-custom {
+    max-width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  .modal-body-custom {
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure the printable report area is fully visible and spans the page */
+  .printable-report-area {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
   }
 }
 </style>

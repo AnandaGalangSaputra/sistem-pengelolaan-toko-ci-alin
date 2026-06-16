@@ -92,6 +92,14 @@ const DEFAULT_TRANSACTIONS = [
     discount: 5000
   }
 ]
+
+// Default mock customers
+const DEFAULT_CUSTOMERS = [
+  { id: 1, name: 'Budi Santoso', phone: '081234567890', type: 'VIP' },
+  { id: 2, name: 'Siti Rahma', phone: '085678901234', type: 'Reguler' },
+  { id: 3, name: 'Dewi Lestari', phone: '089012345678', type: 'VIP' },
+  { id: 4, name: 'Ahmad Fauzi', phone: '082134567890', type: 'Reguler' }
+]
 // WhatsApp templates
 export const waTemplates = [
   {
@@ -121,6 +129,7 @@ export const state = reactive({
   products: loadState('toko_alin_products', DEFAULT_PRODUCTS),
   discounts: loadState('toko_alin_discounts', DEFAULT_DISCOUNTS),
   transactions: loadState('toko_alin_transactions', DEFAULT_TRANSACTIONS),
+  customers: loadState('toko_alin_customers', DEFAULT_CUSTOMERS),
   waPaired: loadState('toko_alin_wa_paired', false),
   waPairedNumber: loadState('toko_alin_wa_paired_number', ''),
   broadcastHistory: loadState('toko_alin_broadcast_history', [
@@ -135,6 +144,10 @@ export const state = reactive({
 // Watchers to persist state changes to localStorage
 watch(() => state.products, (newVal) => {
   localStorage.setItem('toko_alin_products', JSON.stringify(newVal))
+}, { deep: true })
+
+watch(() => state.customers, (newVal) => {
+  localStorage.setItem('toko_alin_customers', JSON.stringify(newVal))
 }, { deep: true })
 
 watch(() => state.discounts, (newVal) => {
@@ -303,4 +316,23 @@ export const addBroadcastHistory = (templateTitle, targetLabel) => {
     template: templateTitle,
     target: targetLabel
   })
+}
+
+export const addCustomer = (name, phone, type = 'Reguler') => {
+  const newId = state.customers.length ? Math.max(...state.customers.map(c => c.id)) + 1 : 1
+  state.customers.push({
+    id: newId,
+    name,
+    phone,
+    type
+  })
+}
+
+export const deleteCustomer = (id) => {
+  const idx = state.customers.findIndex(c => c.id === id)
+  if (idx !== -1) {
+    state.customers.splice(idx, 1)
+    return true
+  }
+  return false
 }
