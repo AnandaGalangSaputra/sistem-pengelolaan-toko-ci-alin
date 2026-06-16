@@ -1,0 +1,435 @@
+<script setup>
+import { ref, computed } from 'vue'
+import { state, addProduct, editProduct, deleteProduct } from '../store/store.js'
+
+const successToastMsg = ref('')
+const viewMode = ref('grid') // 'grid' or 'table'
+
+// Filtered products based on search bar query
+const filteredProducts = computed(() => {
+  if (!state.searchQuery) return state.products
+  const q = state.searchQuery.toLowerCase()
+  return state.products.filter(p => 
+    p.name.toLowerCase().includes(q) || 
+    p.rack.toLowerCase().includes(q)
+  )
+})
+
+// Modal states
+const showAddModal = ref(false)
+const showEditModal = ref(false)
+const selectedProd = ref(null)
+
+// Forms input refs
+const formName = ref('')
+const formRack = ref('')
+const formStock = ref(0)
+const formLimit = ref(5)
+const formPrice = ref(0)
+const formImage = ref('')
+
+const openAddModal = () => {
+  formName.value = ''
+  formRack.value = ''
+  formStock.value = 0
+  formLimit.value = 5
+  formPrice.value = 0
+  formImage.value = ''
+  showAddModal.value = true
+}
+
+const submitAdd = () => {
+  if (!formName.value || !formRack.value || formPrice.value <= 0) {
+    alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
+    return
+  }
+  addProduct(formName.value, formRack.value, formStock.value, formLimit.value, formPrice.value, formImage.value)
+  showAddModal.value = false
+  triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
+}
+
+const openEditModal = (product) => {
+  selectedProd.value = product
+  formName.value = product.name
+  formRack.value = product.rack
+  formStock.value = product.stock
+  formLimit.value = product.limit
+  formPrice.value = product.price
+  formImage.value = product.image || ''
+  showEditModal.value = true
+}
+
+const submitEdit = () => {
+  if (!selectedProd.value) return
+  if (!formName.value || !formRack.value || formPrice.value <= 0) {
+    alert('Harap isi nama, lokasi rak, dan harga barang dengan benar!')
+    return
+  }
+
+  const updated = {
+    name: formName.value,
+    rack: formRack.value,
+    stock: Number(formStock.value),
+    limit: Number(formLimit.value),
+    price: Number(formPrice.value),
+    image: formImage.value
+  }
+
+  if (editProduct(selectedProd.value.id, updated)) {
+    showEditModal.value = false
+    triggerToast(`Produk "${formName.value}" berhasil diperbarui!`)
+  }
+}
+
+const confirmDelete = (product) => {
+  if (confirm(`Apakah Anda yakin ingin menghapus produk "${product.name}"?`)) {
+    if (deleteProduct(product.id)) {
+      triggerToast(`Produk "${product.name}" telah dihapus!`)
+    }
+  }
+}
+
+const triggerToast = (msg) => {
+  successToastMsg.value = msg
+  setTimeout(() => {
+    successToastMsg.value = ''
+  }, 4000)
+}
+
+const formatRupiah = (val) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
+}
+
+// Compute progress bar color for stock
+const getStockBarClass = (prod) => {
+  if (prod.stock <= 0) return 'bg-danger'
+  if (prod.stock < prod.limit / 2) return 'bg-danger'
+  if (prod.stock < prod.limit) return 'bg-warning'
+  return 'bg-success'
+}
+
+const getStockPercent = (prod) => {
+  const limitMax = Math.max(prod.limit * 1.5, 15)
+  return Math.min(100, (prod.stock / limitMax) * 100)
+}
+</script>
+
+<template>
+  <div class="data-barang-wrapper">
+    <!-- Success Toast Alert -->
+    <transition name="fade">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>{{ successToastMsg }}</div>
+      </div>
+    </transition>
+
+    <!-- Page Title & Actions -->
+    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h1 class="page-title">Data Barang</h1>
+        <p class="page-subtitle">Kelola nama produk, lokasi rak penyimpanan, dan harga jual produk Toko Ce Alin.</p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <!-- View toggle buttons -->
+        <div class="btn-group border rounded-3 p-1 bg-white me-2">
+          <button 
+            @click="viewMode = 'grid'" 
+            class="btn btn-sm py-1.5 px-3 border-0 d-flex align-items-center"
+            :class="viewMode === 'grid' ? 'btn-primary-custom' : 'btn-light text-muted'"
+          >
+            <i class="bi bi-grid-3x3-gap-fill me-1.5"></i>Grid
+          </button>
+          <button 
+            @click="viewMode = 'table'" 
+            class="btn btn-sm py-1.5 px-3 border-0 d-flex align-items-center"
+            :class="viewMode === 'table' ? 'btn-primary-custom' : 'btn-light text-muted'"
+          >
+            <i class="bi bi-table me-1.5"></i>Tabel
+          </button>
+        </div>
+
+        <button @click="openAddModal" class="btn btn-primary-custom">
+          <i class="bi bi-plus-lg me-2"></i>
+          <span>Tambah Produk</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tampilan 1: Grid Card Bergambar (Default) -->
+    <div v-if="viewMode === 'grid'">
+      <div class="row g-4">
+        <div v-for="prod in filteredProducts" :key="prod.id" class="col-12 col-sm-6 col-md-4 col-xl-3">
+          <div class="card h-100 border-0 shadow-sm overflow-hidden product-card-hover rounded-4 bg-white border">
+            <!-- Product Card Header (Image + Location/Status Badges) -->
+            <div class="position-relative overflow-hidden bg-light" style="height: 190px;">
+              <img 
+                :src="prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=60'" 
+                class="w-100 h-100 object-fit-cover transition-img" 
+                :alt="prod.name"
+              />
+              <!-- Location Badge -->
+              <span class="position-absolute top-3 start-3 badge bg-dark bg-opacity-75 py-1.5 px-2.5 rounded-3 text-white small">
+                <i class="bi bi-geo-alt-fill text-primary me-1"></i>{{ prod.rack }}
+              </span>
+              <!-- Status Badge -->
+              <span class="position-absolute top-3 end-3 badge-status" :class="prod.status.toLowerCase()">
+                {{ prod.status }}
+              </span>
+            </div>
+
+            <!-- Product Card Body -->
+            <div class="card-body p-3.5 d-flex flex-column justify-content-between">
+              <div>
+                <h5 class="fw-bold text-dark mb-1 text-truncate-2" style="font-size: 0.95rem; line-height: 1.4; min-height: 2.8rem;">
+                  {{ prod.name }}
+                </h5>
+                <h4 class="fw-bold text-primary mb-3.5" style="font-size: 1.25rem;">
+                  {{ formatRupiah(prod.price) }}
+                </h4>
+              </div>
+
+              <div>
+                <!-- Stock Level Progress Bar -->
+                <div class="d-flex justify-content-between align-items-center mb-1 small text-muted">
+                  <span>Stok: <strong>{{ prod.stock }} unit</strong></span>
+                  <span>Limit: {{ prod.limit }}</span>
+                </div>
+                <div class="progress mb-3.5" style="height: 6px; background-color: #f1f5f9;">
+                  <div 
+                    class="progress-bar" 
+                    :class="getStockBarClass(prod)" 
+                    role="progressbar" 
+                    :style="{ width: getStockPercent(prod) + '%' }"
+                    aria-valuemin="0" 
+                    aria-valuemax="100"
+                  ></div>
+                </div>
+
+                <!-- Card Actions Row -->
+                <div class="d-flex gap-2 border-top pt-3">
+                  <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom flex-fill btn-sm py-1.5 px-2">
+                    <i class="bi bi-pencil-square me-1"></i>Edit
+                  </button>
+                  <button @click="confirmDelete(prod)" class="btn btn-sm btn-outline-danger flex-fill py-1.5 px-2 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
+                    <i class="bi bi-trash-fill me-1"></i>Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredProducts.length === 0" class="col-12 text-center py-5 text-muted bg-white border rounded-4 shadow-sm">
+          <i class="bi bi-search d-block fs-1 mb-2 text-secondary"></i>
+          <span>Tidak menemukan produk yang cocok dengan pencarian Anda.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tampilan 2: Tabel Klasik -->
+    <div v-else-if="viewMode === 'table'" class="card-content-box shadow-sm">
+      <div class="table-responsive">
+        <table class="table custom-table align-middle">
+          <thead>
+            <tr>
+              <th style="width: 60px;">No</th>
+              <th>Nama Produk</th>
+              <th>Lokasi Rak</th>
+              <th>Harga Jual</th>
+              <th>Stok Tersedia</th>
+              <th>Status</th>
+              <th style="width: 150px;" class="text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(prod, idx) in filteredProducts" :key="prod.id">
+              <td>{{ idx + 1 }}</td>
+              <td class="fw-semibold text-dark">
+                <div class="d-flex align-items-center">
+                  <img :src="prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=50&auto=format&fit=crop&q=60'" class="rounded me-2.5 object-fit-cover" style="width: 36px; height: 36px;" />
+                  <span>{{ prod.name }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-light text-secondary border py-1.5 px-2.5">
+                  <i class="bi bi-geo-alt-fill text-primary me-1"></i>{{ prod.rack }}
+                </span>
+              </td>
+              <td class="fw-bold text-dark">{{ formatRupiah(prod.price) }}</td>
+              <td>{{ prod.stock }} unit</td>
+              <td>
+                <span class="badge-status" :class="prod.status.toLowerCase()">
+                  {{ prod.status }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex justify-content-center gap-2">
+                  <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom btn-sm py-1 px-2.5">
+                    <i class="bi bi-pencil-square me-1"></i>Edit
+                  </button>
+                  <button @click="confirmDelete(prod)" class="btn btn-sm btn-outline-danger py-1 px-2.5 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
+                    <i class="bi bi-trash-fill me-1"></i>Hapus
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="filteredProducts.length === 0">
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-search d-block fs-2 mb-2 text-secondary"></i>
+                <span>Tidak menemukan produk yang cocok dengan pencarian Anda.</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal: Add Product -->
+    <transition name="modal">
+      <div v-if="showAddModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-plus-circle-fill text-primary me-2"></i>Tambah Produk Baru
+            </h3>
+            <button @click="showAddModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom">
+            <div class="mb-3">
+              <label for="addName" class="form-label-style">Nama Barang</label>
+              <input type="text" id="addName" v-model="formName" class="form-control-style" placeholder="Contoh: Susu Indomilk 1L" />
+            </div>
+
+            <div class="mb-3">
+              <label for="addImage" class="form-label-style">URL Gambar Produk (Opsional)</label>
+              <input type="text" id="addImage" v-model="formImage" class="form-control-style" placeholder="Contoh: https://images.unsplash.com/..." />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="addRack" class="form-label-style">Lokasi Rak</label>
+                <input type="text" id="addRack" v-model="formRack" class="form-control-style" placeholder="Contoh: Rak B-3" />
+              </div>
+              <div class="col-6">
+                <label for="addPrice" class="form-label-style">Harga Jual (Rp)</label>
+                <input type="number" id="addPrice" v-model.number="formPrice" class="form-control-style" placeholder="Contoh: 18000" />
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="addStock" class="form-label-style">Stok Awal</label>
+                <input type="number" id="addStock" v-model.number="formStock" class="form-control-style" />
+              </div>
+              <div class="col-6">
+                <label for="addLimit" class="form-label-style">Batas Minimum Stok</label>
+                <input type="number" id="addLimit" v-model.number="formLimit" class="form-control-style" />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showAddModal = false" class="btn-cancel">Batal</button>
+            <button @click="submitAdd" class="btn-confirm">Tambah Produk</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal: Edit Product -->
+    <transition name="modal">
+      <div v-if="showEditModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-pencil-square text-primary me-2"></i>Edit Informasi Produk
+            </h3>
+            <button @click="showEditModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom">
+            <div class="mb-3">
+              <label for="editName" class="form-label-style">Nama Barang</label>
+              <input type="text" id="editName" v-model="formName" class="form-control-style" />
+            </div>
+
+            <div class="mb-3">
+              <label for="editImage" class="form-label-style">URL Gambar Produk</label>
+              <input type="text" id="editImage" v-model="formImage" class="form-control-style" />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="editRack" class="form-label-style">Lokasi Rak</label>
+                <input type="text" id="editRack" v-model="formRack" class="form-control-style" />
+              </div>
+              <div class="col-6">
+                <label for="editPrice" class="form-label-style">Harga Jual (Rp)</label>
+                <input type="number" id="editPrice" v-model.number="formPrice" class="form-control-style" />
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="editStock" class="form-label-style">Stok Fisik</label>
+                <input type="number" id="editStock" v-model.number="formStock" class="form-control-style" />
+              </div>
+              <div class="col-6">
+                <label for="editLimit" class="form-label-style">Batas Minimum Stok</label>
+                <input type="number" id="editLimit" v-model.number="formLimit" class="form-control-style" />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showEditModal = false" class="btn-cancel">Batal</button>
+            <button @click="submitEdit" class="btn-confirm">Simpan Perubahan</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </div>
+</template>
+
+<style scoped>
+.data-barang-wrapper {
+  padding: 30px;
+  overflow-y: auto;
+  height: calc(100vh - 70px);
+}
+.top-3 {
+  top: 1rem;
+}
+.start-3 {
+  left: 1rem;
+}
+.end-3 {
+  right: 1rem;
+}
+.transition-img {
+  transition: transform 0.35s ease;
+}
+.product-card-hover:hover .transition-img {
+  transform: scale(1.05);
+}
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 991px) {
+  .data-barang-wrapper {
+    height: auto;
+    padding: 20px;
+  }
+}
+</style>

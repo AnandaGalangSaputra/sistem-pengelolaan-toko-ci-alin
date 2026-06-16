@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import WhatsappButton from '../components/WhatsappButton.vue'
 
 const router = useRouter()
 
@@ -40,19 +41,16 @@ const handleLogin = () => {
 </script>
 
 <template>
-  <div class="login-wrapper-outer">
-    <!-- Dark grey top header bar from screenshot -->
-
-
+  <div class="login-wrapper-outer vh-100">
     <!-- Main Split Layout Container -->
-    <main class="login-container">
+    <main class="login-container h-100">
 
       <!-- Left Panel: Brand info with deep blue background -->
-      <section class="info-panel">
+      <section class="info-panel d-none d-md-flex">
         <div class="info-content">
           <!-- Brand Logo Wrapper -->
           <div class="logo-wrapper">
-            <img src="" alt="">
+            <img src="../assets/Asset 7.svg" class="img-left" alt="Toko Ce ALin" id="logo-left">
           </div>
 
           <!-- Headline & Copywriting -->
@@ -115,9 +113,18 @@ const handleLogin = () => {
             </div>
 
           </form>
+          <WhatsappButton phone-number="6281234567890" message="Halo Admin ..." />
         </div>
       </section>
 
     </main>
   </div>
 </template>
+
+<style scoped>
+.img-left {
+  max-width: 40%;
+  height: auto;
+  display: block;
+}
+</style>

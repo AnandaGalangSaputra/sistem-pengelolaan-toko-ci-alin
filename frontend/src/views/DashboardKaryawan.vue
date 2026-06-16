@@ -1,185 +1,280 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { state, restockProduct, addDiscount } from '../store/store.js'
+import MetricsGrid from '../components/dashboard/MetricsGrid.vue'
+import WeeklySalesChart from '../components/dashboard/WeeklySalesChart.vue'
+import DiscountHistory from '../components/dashboard/DiscountHistory.vue'
+import WhatsappBroadcast from '../components/dashboard/WhatsappBroadcast.vue'
+import LowStockTable from '../components/modals/LowStockTable.vue'
+import RestockModal from '../components/modals/RestockModal.vue'
 
-const router = useRouter()
+// Search filter for low-stock products based on global state searchQuery
+const filteredLowStockProducts = computed(() => {
+  return state.products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+      p.rack.toLowerCase().includes(state.searchQuery.toLowerCase())
+    return matchesSearch && p.stock < p.limit
+  })
+})
 
-const handleLogout = () => {
-  // Clear any state if needed, then redirect to login
-  router.push('/login')
+// Metrics values computed dynamically based on state
+const totalActiveProducts = computed(() => 1240 + state.products.length)
+const lowStockCount = computed(() => state.products.filter(p => p.stock < p.limit).length)
+const totalTransactionsToday = computed(() => state.transactions.length + 40) // Baseline 40 + simulation transactions
+const totalRevenueToday = computed(() => {
+  const simRevenue = state.transactions.reduce((acc, tx) => acc + tx.total, 0)
+  return 2450000 + simRevenue // Baseline 2.45M + new sales
+})
+
+// Restock Modal state
+const showRestockModal = ref(false)
+const selectedProduct = ref(null)
+const successToastMsg = ref('')
+
+// Trigger restock modal
+const openRestockModal = (product) => {
+  selectedProduct.value = product
+  showRestockModal.value = true
+}
+
+// Perform restock action
+const submitRestock = (productId, amount) => {
+  if (restockProduct(productId, amount)) {
+    const prod = state.products.find(p => p.id === productId)
+    successToastMsg.value = `Berhasil merestok ${prod.name} sebanyak ${amount} unit di ${prod.rack}!`
+    setTimeout(() => {
+      successToastMsg.value = ''
+    }, 4000)
+  }
+  showRestockModal.value = false
+  selectedProduct.value = null
+}
+
+// Quick Discount Modal state
+const showDiscountModal = ref(false)
+const newDiscountItem = ref('')
+const newDiscountPrice = ref('')
+const newDiscountRequestPrice = ref('')
+
+const openDiscountModal = () => {
+  newDiscountItem.value = ''
+  newDiscountPrice.value = ''
+  newDiscountRequestPrice.value = ''
+  showDiscountModal.value = true
+}
+
+const submitDiscountRequest = () => {
+  if (!newDiscountItem.value || !newDiscountPrice.value || !newDiscountRequestPrice.value) return
+
+  addDiscount(newDiscountItem.value, Number(newDiscountPrice.value), Number(newDiscountRequestPrice.value))
+
+  showDiscountModal.value = false
+  successToastMsg.value = `Diskon langsung untuk ${newDiscountItem.value} berhasil diterapkan di kasir!`
+  setTimeout(() => {
+    successToastMsg.value = ''
+  }, 4000)
+}
+
+// Chart Interactive Data
+const weeklySalesData = [
+  { day: 'Senin', sales: 1200000, label: 'Rp 1.2M' },
+  { day: 'Selasa', sales: 1800000, label: 'Rp 1.8M' },
+  { day: 'Rabu', sales: 1500000, label: 'Rp 1.5M' },
+  { day: 'Kamis', sales: 2100000, label: 'Rp 2.1M' },
+  { day: 'Jumat', sales: 2450000, label: 'Rp 2.45M' },
+  { day: 'Sabtu', sales: 3100000, label: 'Rp 3.1M' },
+  { day: 'Minggu', sales: 2900000, label: 'Rp 2.9M' }
+]
+
+const formatRupiah = (val) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 }
 </script>
 
 <template>
-  <div class="dashboard-wrapper">
-    <!-- Header -->
-    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-3 shadow-sm">
-      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-5 fw-bold" href="#">
-        <i class="bi bi-shop me-2 text-primary"></i>Toko Ce ALin
-      </a>
-      <div class="navbar-nav">
-        <div class="nav-item text-nowrap px-3">
-          <button @click="handleLogout" class="btn btn-outline-light btn-sm border-0 fw-semibold">
-            <i class="bi bi-box-arrow-right me-2"></i>Keluar
-          </button>
-        </div>
+  <div class="dashboard-content-wrapper w-100">
+    <!-- Toast Alerts -->
+    <transition name="fade">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow"
+        role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>{{ successToastMsg }}</div>
       </div>
-    </header>
+    </transition>
 
-    <!-- Main Content -->
-    <div class="container-fluid py-4">
-      <div class="row justify-content-center">
-        <main class="col-md-9 col-lg-10 px-md-4">
-          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-            <div>
-              <span class="text-muted small fw-semibold text-uppercase tracking-wider">Aplikasi Pengelolaan Toko</span>
-              <h1 class="h2 fw-bold text-dark m-0">Dashboard Karyawan</h1>
-            </div>
-            <div class="btn-toolbar mb-2 mb-md-0">
-              <div class="btn-group me-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary">
-                  <i class="bi bi-calendar-event me-2"></i>Hari Ini
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary">Laporan</button>
-              </div>
-            </div>
-          </div>
+    <!-- Dashboard Page Title -->
+    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h1 class="page-title">Dashboard Karyawan</h1>
+        <p class="page-subtitle">Pantau stok barang, kelola operasional rak, dan layani pelanggan hari ini.</p>
+      </div>
 
-          <!-- Alert Welcome -->
-          <div class="alert alert-primary border-0 shadow-sm d-flex align-items-center p-3 mb-4 rounded-3" role="alert">
-            <i class="bi bi-info-circle-fill fs-4 me-3"></i>
-            <div>
-              <strong>Selamat Bekerja!</strong> Anda masuk sebagai <strong>Karyawan</strong>. Silakan kelola stok dan kasir dengan teliti.
-            </div>
-          </div>
-
-          <!-- Stats Widgets Grid -->
-          <div class="row g-4 mb-4">
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm rounded-3 p-4 h-100 position-relative overflow-hidden widget-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <span class="text-muted fw-semibold">Transaksi Hari Ini</span>
-                  <div class="icon-shape bg-primary-light text-primary rounded-3 p-2">
-                    <i class="bi bi-cart-check fs-4"></i>
-                  </div>
-                </div>
-                <h3 class="fw-bold mb-2">24 Transaksi</h3>
-                <span class="text-success small fw-semibold">
-                  <i class="bi bi-arrow-up-right me-1"></i>+12% dibanding kemarin
-                </span>
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm rounded-3 p-4 h-100 position-relative overflow-hidden widget-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <span class="text-muted fw-semibold">Stok Barang Menipis</span>
-                  <div class="icon-shape bg-warning-light text-warning rounded-3 p-2">
-                    <i class="bi bi-box-seam fs-4"></i>
-                  </div>
-                </div>
-                <h3 class="fw-bold mb-2">8 Barang</h3>
-                <span class="text-danger small fw-semibold">
-                  <i class="bi bi-exclamation-triangle me-1"></i>Perlu restock segera
-                </span>
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm rounded-3 p-4 h-100 position-relative overflow-hidden widget-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <span class="text-muted fw-semibold">Pencarian Rak Terbanyak</span>
-                  <div class="icon-shape bg-info-light text-info rounded-3 p-2">
-                    <i class="bi bi-search fs-4"></i>
-                  </div>
-                </div>
-                <h3 class="fw-bold mb-2">Rak B (Susu Anak)</h3>
-                <span class="text-muted small">Diakses oleh 15 karyawan</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Feature Quick Actions -->
-          <h2 class="h5 fw-bold text-dark mb-3">Akses Cepat Fitur</h2>
-          <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-              <div class="card border-0 shadow-sm rounded-3 h-100 p-3 card-hover">
-                <div class="card-body d-flex align-items-center">
-                  <div class="feature-icon bg-primary text-white rounded-3 p-3 me-3">
-                    <i class="bi bi-printer fs-4"></i>
-                  </div>
-                  <div>
-                    <h5 class="fw-bold mb-1 fs-6">Kasir & Transaksi</h5>
-                    <p class="text-muted small m-0">Input belanjaan dan cetak nota kasir.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6 col-lg-4">
-              <div class="card border-0 shadow-sm rounded-3 h-100 p-3 card-hover">
-                <div class="card-body d-flex align-items-center">
-                  <div class="feature-icon bg-success text-white rounded-3 p-3 me-3">
-                    <i class="bi bi-journal-check fs-4"></i>
-                  </div>
-                  <div>
-                    <h5 class="fw-bold mb-1 fs-6">Manajemen Stok</h5>
-                    <p class="text-muted small m-0">Perbarui jumlah dan lokasi rak barang.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6 col-lg-4">
-              <div class="card border-0 shadow-sm rounded-3 h-100 p-3 card-hover">
-                <div class="card-body d-flex align-items-center">
-                  <div class="feature-icon bg-info text-white rounded-3 p-3 me-3">
-                    <i class="bi bi-upc-scan fs-4"></i>
-                  </div>
-                  <div>
-                    <h5 class="fw-bold mb-1 fs-6">Scan Barcode</h5>
-                    <p class="text-muted small m-0">Cek info produk langsung via scan.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </main>
+      <div class="d-flex gap-2">
+        <router-link to="/dashboard-karyawan/kasir" class="btn btn-primary-custom">
+          <i class="bi bi-calculator me-2"></i>
+          <span>Buka Kasir Penjualan</span>
+        </router-link>
       </div>
     </div>
+
+    <!-- Metrics Grid Component -->
+    <MetricsGrid :total-active-products="totalActiveProducts" :low-stock-count="lowStockCount"
+      :total-transactions-today="totalTransactionsToday" :total-revenue-today="totalRevenueToday" />
+
+    <!-- Dashboard layout split -->
+    <div class="row g-4">
+      <!-- Left Panel: Low Stock Table -->
+      <LowStockTable :products="filteredLowStockProducts" :low-stock-count="lowStockCount" :format-rupiah="formatRupiah"
+        @restock="openRestockModal" />
+
+      <!-- Right Panel: Line Chart & WhatsApp & Discount panels -->
+      <div class="col-12 col-xl-5">
+        <div class="d-flex flex-column gap-4">
+          <!-- SVG Line Chart Component -->
+          <WeeklySalesChart :weekly-sales-data="weeklySalesData" />
+
+          <!-- Reusable WhatsApp Broadcast Widget -->
+          <WhatsappBroadcast :show-pair-button="true" :show-history="true" />
+
+          <!-- Discount History List Component -->
+          <DiscountHistory :discounts="state.discounts" @open-add-discount="openDiscountModal" />
+
+          <!-- Transaction Summary widget -->
+          <div class="card-content-box shadow-sm">
+            <div class="box-header d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h2 class="box-title">Transaksi Kasir Hari Ini</h2>
+                <p class="box-subtitle">Daftar penjualan terbaru yang diselesaikan oleh kasir.</p>
+              </div>
+              <router-link to="/dashboard-karyawan/laporan" class="btn btn-xs-custom" title="Detail Laporan">
+                <i class="bi bi-arrow-right"></i>
+              </router-link>
+            </div>
+            <div class="table-responsive">
+              <table class="table custom-table-mini align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Waktu</th>
+                    <th>Jumlah Item</th>
+                    <th>Potongan</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="tx in state.transactions.slice(0, 4)" :key="tx.id">
+                    <td class="text-muted small">{{ tx.time }}</td>
+                    <td class="fw-semibold text-dark">{{ tx.itemsCount }} item</td>
+                    <td class="text-danger small">{{ tx.discount > 0 ? formatRupiah(tx.discount) : '-' }}</td>
+                    <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
+                  </tr>
+                  <tr v-if="state.transactions.length === 0">
+                    <td colspan="4" class="text-center text-muted py-3">Belum ada transaksi hari ini.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Systems Status Panel -->
+          <div class="card-content-box shadow-sm">
+            <div class="box-header mb-3">
+              <h2 class="box-title">Konektivitas & Sistem</h2>
+              <p class="box-subtitle">Status perangkat penunjang operasional kasir Ce Alin.</p>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3" :class="state.waPaired ? 'border-success' : 'border-secondary'" style="border-left-width: 4px !important;">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-whatsapp fs-5 me-2.5" :class="state.waPaired ? 'text-success' : 'text-secondary'"></i>
+                  <span class="small fw-semibold text-dark">WhatsApp Broadcast Gateway</span>
+                </div>
+                <span class="badge" :class="state.waPaired ? 'bg-success' : 'bg-secondary'">
+                  {{ state.waPaired ? 'Online' : 'Offline' }}
+                </span>
+              </div>
+              
+              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-success" style="border-left-width: 4px !important;">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-printer fs-5 me-2.5 text-success"></i>
+                  <span class="small fw-semibold text-dark">Printer Thermal Nota</span>
+                </div>
+                <span class="badge bg-success">Siap</span>
+              </div>
+
+              <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-primary" style="border-left-width: 4px !important;">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-database fs-5 me-2.5 text-primary"></i>
+                  <span class="small fw-semibold text-dark">Penyimpanan Lokal (Offline Cache)</span>
+                </div>
+                <span class="badge bg-primary">Aktif</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restock Item Modal -->
+    <RestockModal :show="showRestockModal" :product="selectedProduct" @close="showRestockModal = false"
+      @confirm="submitRestock" />
+
+    <!-- Request Discount Modal (Direct Application Simulation) -->
+    <transition name="modal">
+      <div v-if="showDiscountModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-tag-fill text-primary me-2"></i>Tambah Diskon Langsung Cepat
+            </h3>
+            <button @click="showDiscountModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom">
+            <p class="text-muted small mb-4">Simulasikan penambahan diskon harga barang langsung yang akan langsung
+              aktif di kasir.</p>
+
+            <div class="mb-3">
+              <label for="discountItem" class="form-label-style">Nama Barang / Produk</label>
+              <input type="text" id="discountItem" v-model="newDiscountItem" class="form-control-style"
+                placeholder="Misal: Susu SGM 400g" required />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="originalPrice" class="form-label-style">Harga Asli (Rp)</label>
+                <input type="number" id="originalPrice" v-model.number="newDiscountPrice" class="form-control-style"
+                  placeholder="Misal: 45000" required />
+              </div>
+              <div class="col-6">
+                <label for="reqPrice" class="form-label-style">Harga Setelah Diskon (Rp)</label>
+                <input type="number" id="reqPrice" v-model.number="newDiscountRequestPrice" class="form-control-style"
+                  placeholder="Misal: 40000" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showDiscountModal = false" class="btn-cancel">Batal</button>
+            <button @click="submitDiscountRequest" class="btn-confirm">Terapkan Diskon</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
-.dashboard-wrapper {
-  background-color: #f8f9fa;
-  min-height: 100vh;
+.dashboard-content-wrapper {
+  padding: 30px;
+  overflow-y: auto;
+  height: calc(100vh - 70px);
 }
-.tracking-wider {
-  letter-spacing: 0.05em;
-}
-.bg-primary-light {
-  background-color: rgba(22, 96, 207, 0.1);
-}
-.bg-warning-light {
-  background-color: rgba(255, 193, 7, 0.15);
-}
-.bg-info-light {
-  background-color: rgba(13, 202, 240, 0.15);
-}
-.card-hover {
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-}
-.card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
-}
-.icon-shape {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+
+@media (max-width: 991px) {
+  .dashboard-content-wrapper {
+    height: auto;
+    padding: 20px;
+  }
 }
 </style>

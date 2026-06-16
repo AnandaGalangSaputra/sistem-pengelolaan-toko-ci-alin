@@ -12,13 +12,53 @@ const routes = [
   },
   {
     path: '/dashboard-karyawan',
-    name: 'DashboardKaryawan',
-    component: () => import('../views/DashboardKaryawan.vue')
+    component: () => import('../components/layout/MainLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'DashboardKaryawan',
+        component: () => import('../views/DashboardKaryawan.vue')
+      },
+      {
+        path: 'data-barang',
+        name: 'DataBarang',
+        component: () => import('../views/DataBarang.vue')
+      },
+      {
+        path: 'stok-barang',
+        name: 'StokBarang',
+        component: () => import('../views/StokBarang.vue')
+      },
+      {
+        path: 'kasir',
+        name: 'Kasir',
+        component: () => import('../views/Kasir.vue')
+      },
+      {
+        path: 'broadcast',
+        name: 'BroadcastWA',
+        component: () => import('../views/BroadcastWA.vue')
+      },
+      {
+        path: 'laporan',
+        name: 'LaporanTransaksi',
+        component: () => import('../views/LaporanTransaksi.vue')
+      },
+      {
+        path: 'pengaturan',
+        name: 'PengaturanToko',
+        component: () => import('../views/PengaturanToko.vue')
+      },
+      {
+        path: 'akun',
+        name: 'AkunKaryawan',
+        component: () => import('../views/AkunKaryawan.vue')
+      }
+    ]
   },
   {
     path: '/dashboard-owner',
-    name: 'DashboardOwner',
-    component: () => import('../views/DashboardOwner.vue')
+    redirect: '/dashboard-karyawan'
   }
 ]
 
