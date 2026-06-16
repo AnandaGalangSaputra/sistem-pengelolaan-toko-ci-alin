@@ -114,4 +114,77 @@ class AuthController extends Controller
             'logged_in' => false
         ]);
     }
+
+    /**
+     * API Update Password
+     */
+    public function apiUpdatePassword(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu!'
+            ], 401);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:4',
+        ]);
+
+        $user = Auth::user();
+
+        // Check if old password matches
+        if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kata sandi saat ini salah!'
+            ], 422);
+        }
+
+        // Update password
+        $user->password = \Illuminate\Support\Facades\Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kata sandi berhasil diperbarui!'
+        ]);
+    }
+
+    /**
+     * API Update Profile
+     */
+    public function apiUpdateProfile(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu!'
+            ], 401);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'role' => 'nullable|string|in:owner,karyawan',
+        ]);
+
+        $user = Auth::user();
+        $user->name = trim($request->name);
+        if ($request->has('role') && !empty($request->role)) {
+            $user->role = strtolower($request->role);
+        }
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diperbarui!',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'role' => $user->role,
+            ]
+        ]);
+    }
 }

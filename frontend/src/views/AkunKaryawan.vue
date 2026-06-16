@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { state } from '../store/store.js'
+import { state, updateProfile as updateProfileStore, updatePassword as updatePasswordStore } from '../store/store.js'
 
 const successToastMsg = ref('')
 
@@ -14,19 +14,21 @@ const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
-const updateProfile = () => {
+const updateProfile = async () => {
   if (!formName.value) {
     alert('Nama tidak boleh kosong!')
     return
   }
 
-  state.currentUser.name = formName.value
-  state.currentUser.role = formRole.value.toLowerCase()
-
-  triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
+  const result = await updateProfileStore(formName.value, formRole.value)
+  if (result.success) {
+    triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
+  } else {
+    alert(result.message)
+  }
 }
 
-const changePassword = () => {
+const changePassword = async () => {
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
     alert('Harap isi semua kolom kata sandi!')
     return
@@ -37,12 +39,17 @@ const changePassword = () => {
     return
   }
 
-  // Clear inputs
-  currentPassword.value = ''
-  newPassword.value = ''
-  confirmPassword.value = ''
+  const result = await updatePasswordStore(currentPassword.value, newPassword.value)
+  if (result.success) {
+    // Clear inputs
+    currentPassword.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
 
-  triggerToast('Kata sandi berhasil diperbarui (Simulasi)!')
+    triggerToast('Kata sandi berhasil diperbarui secara permanen!')
+  } else {
+    alert(result.message)
+  }
 }
 
 const triggerToast = (msg) => {

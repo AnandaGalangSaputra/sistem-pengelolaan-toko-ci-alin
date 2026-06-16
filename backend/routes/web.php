@@ -21,6 +21,8 @@ Route::get('/logout', [AuthController::class, 'logout']);
 Route::post('/api/login', [AuthController::class, 'apiLogin']);
 Route::post('/api/logout', [AuthController::class, 'apiLogout']);
 Route::get('/api/me', [AuthController::class, 'apiMe']);
+Route::post('/api/change-password', [AuthController::class, 'apiUpdatePassword']);
+Route::post('/api/update-profile', [AuthController::class, 'apiUpdateProfile']);
 
 Route::get('/api/barangs', [App\Http\Controllers\BarangController::class, 'index']);
 Route::get('/api/raks', [App\Http\Controllers\BarangController::class, 'raks']);

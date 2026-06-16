@@ -790,3 +790,51 @@ export const logoutUser = async () => {
   state.customers = []
   state.broadcastHistory = []
 }
+
+export const updateProfile = async (name, role) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/update-profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ name, role })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      state.currentUser = resData.user
+      localStorage.setItem('toko_alin_user', JSON.stringify(resData.user))
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal memperbarui profil.' }
+    }
+  } catch (error) {
+    console.error('Error updating profile:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat memperbarui profil!' }
+  }
+}
+
+export const updatePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal memperbarui kata sandi.' }
+    }
+  } catch (error) {
+    console.error('Error updating password:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat memperbarui kata sandi!' }
+  }
+}
