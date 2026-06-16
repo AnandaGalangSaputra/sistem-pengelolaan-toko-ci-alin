@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { state, pairPrinter } from '../store/store.js'
 
 const successToastMsg = ref('')
@@ -45,8 +45,22 @@ const resetSimulationData = () => {
 // Printer Pairing States & Actions
 const showPrinterModal = ref(false)
 const isScanning = ref(false)
-const selectedPrinter = ref('RP-58A Thermal Printer')
-const printerList = ['RP-58A Thermal Printer (Bluetooth)', 'EPSON TM-T82 Thermal (USB/LAN)', 'Generic POS-58 Printer (Bluetooth)']
+const selectedPrinter = ref('RP-58A Thermal Printer (Bluetooth)')
+const printerList = [
+  'RP-58A Thermal Printer (Bluetooth)', 
+  'EPSON TM-T82 Thermal (USB/LAN)', 
+  'Generic POS-58 Printer (Bluetooth)',
+  'Generic 58mm Thermal Printer (USB)'
+]
+
+// Auto-save printer configurations when changed
+watch(() => shopConfig.printerPaperSize, (newVal) => {
+  localStorage.setItem('shop_printer_size', JSON.stringify(newVal))
+})
+
+watch(() => shopConfig.autoPrintReceipt, (newVal) => {
+  localStorage.setItem('shop_auto_print', JSON.stringify(newVal))
+})
 
 const triggerPairPrinter = () => {
   isScanning.value = true

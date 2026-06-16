@@ -35,12 +35,21 @@ const getStartOfWeek = (d) => {
 const totalActiveProducts = computed(() => state.products.length)
 const lowStockCount = computed(() => state.products.filter(p => p.stock < p.limit).length)
 
+const transactionsToday = computed(() => {
+  const todayStr = getTodayDateString()
+  return state.transactions.filter(tx => {
+    const txLocalDate = new Date(tx.date)
+    const txDateStr = `${txLocalDate.getFullYear()}-${String(txLocalDate.getMonth() + 1).padStart(2, '0')}-${String(txLocalDate.getDate()).padStart(2, '0')}`
+    return txDateStr === todayStr
+  })
+})
+
 const totalTransactionsToday = computed(() => {
-  return state.transactions.length
+  return transactionsToday.value.length
 })
 
 const totalRevenueToday = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.total, 0)
+  return transactionsToday.value.reduce((acc, tx) => acc + tx.total, 0)
 })
 
 // Restock Modal state
@@ -198,13 +207,13 @@ const formatRupiah = (val) => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="tx in state.transactions.slice(0, 4)" :key="tx.id">
+                  <tr v-for="tx in transactionsToday.slice(0, 4)" :key="tx.id">
                     <td class="text-muted small">{{ tx.time }}</td>
                     <td class="fw-semibold text-dark">{{ tx.itemsCount }} item</td>
                     <td class="text-danger small">{{ tx.discount > 0 ? formatRupiah(tx.discount) : '-' }}</td>
                     <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
                   </tr>
-                  <tr v-if="state.transactions.length === 0">
+                  <tr v-if="transactionsToday.length === 0">
                     <td colspan="4" class="text-center text-muted py-3">Belum ada transaksi hari ini.</td>
                   </tr>
                 </tbody>
@@ -233,13 +242,16 @@ const formatRupiah = (val) => {
               </div>
 
               <div
-                class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3 border-success"
+                class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-3 border-start border-3"
+                :class="state.printerPaired ? 'border-success' : 'border-secondary'"
                 style="border-left-width: 4px !important;">
                 <div class="d-flex align-items-center">
-                  <i class="bi bi-printer fs-5 me-2.5 text-success"></i>
+                  <i class="bi bi-printer fs-5 me-2.5" :class="state.printerPaired ? 'text-success' : 'text-secondary'"></i>
                   <span class="small fw-semibold text-dark">Printer Thermal Nota</span>
                 </div>
-                <span class="badge bg-success">Siap</span>
+                <span class="badge" :class="state.printerPaired ? 'bg-success' : 'bg-secondary'">
+                  {{ state.printerPaired ? 'Terhubung' : 'Offline' }}
+                </span>
               </div>
 
               <div

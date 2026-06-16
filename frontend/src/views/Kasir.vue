@@ -2,6 +2,15 @@
 import { ref, computed, watch } from 'vue'
 import { state, addTransaction } from '../store/store.js'
 
+const parseUtcToLocal = (dateStr) => {
+  if (!dateStr) return new Date()
+  if (dateStr.includes('Z') || dateStr.includes('+')) {
+    return new Date(dateStr)
+  }
+  const normalized = dateStr.replace(' ', 'T') + 'Z'
+  return new Date(normalized)
+}
+
 const searchProductQuery = ref('')
 const cart = ref([])
 const discountInput = ref(0)
@@ -83,9 +92,33 @@ const finalTotal = computed(() => {
 
 // Checkout Modal states
 const showCheckoutModal = ref(false)
+const showSuccessModal = ref(false)
+const showReceiptModal = ref(false)
+const finishedTransaction = ref(null)
 const cashReceived = ref('')
 const customerName = ref('')
 const customerPhone = ref('')
+
+const getShopName = () => {
+  const saved = localStorage.getItem('shop_name')
+  return saved ? JSON.parse(saved) : 'Toko Ce Alin'
+}
+const getShopAddress = () => {
+  const saved = localStorage.getItem('shop_address')
+  return saved ? JSON.parse(saved) : 'Jalan Raya Sembako No. 7, Jakarta Barat'
+}
+const getShopWa = () => {
+  const saved = localStorage.getItem('shop_whatsapp')
+  return saved ? JSON.parse(saved) : '+62 812-3456-7890'
+}
+const getShopReceiptFooter = () => {
+  const saved = localStorage.getItem('shop_receipt_header')
+  return saved ? JSON.parse(saved) : 'Terima Kasih Telah Belanja di Toko Ce Alin!'
+}
+const getPrinterPaperSize = () => {
+  const saved = localStorage.getItem('shop_printer_size')
+  return saved ? JSON.parse(saved) : '58mm'
+}
 
 const cashChange = computed(() => {
   if (!cashReceived.value) return 0
@@ -110,23 +143,95 @@ const completePayment = async () => {
     return
   }
 
-  // Call store method to commit transaction
-  const success = await addTransaction(cart.value, finalTotal.value, Number(discountInput.value || 0), {
+  const customerData = {
     name: customerName.value,
     phone: customerPhone.value
-  })
-  
-  if (success) {
-    // Clear local states
-    cart.value = []
-    discountInput.value = 0
-    showCheckoutModal.value = false
-
-    successToastMsg.value = 'Transaksi berhasil diselesaikan! Stok barang telah diperbarui secara otomatis.'
-    setTimeout(() => {
-      successToastMsg.value = ''
-    }, 4000)
   }
+  const itemsCopy = [...cart.value]
+  const subtotalVal = subtotal.value
+  const discountVal = Number(discountInput.value || 0)
+  const finalTotalVal = finalTotal.value
+  const cashReceivedVal = Number(cashReceived.value)
+  const cashChangeVal = cashChange.value
+
+  try {
+    const response = await fetch('http://localhost:8000/api/transaksi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        cart: cart.value.map(item => ({
+          product: { id: item.product.id },
+          quantity: item.quantity
+        })),
+        total_harga: finalTotal.value + discountVal,
+        total_diskon: discountVal,
+        grand_total: finalTotal.value,
+        customer: customerData
+      })
+    })
+
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const dateObj = parseUtcToLocal(resData.data.tanggal)
+      // Set finished transaction for printing
+      finishedTransaction.value = {
+        kode_transaksi: resData.data.kode_transaksi,
+        time: dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+        date: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
+        items: itemsCopy,
+        subtotal: subtotalVal,
+        discount: discountVal,
+        total: finalTotalVal,
+        cashReceived: cashReceivedVal,
+        cashChange: cashChangeVal,
+        cashierName: state.currentUser?.name || 'System',
+        customerName: customerData.name || 'Umum',
+        customerPhone: customerData.phone || ''
+      }
+
+      // Reset cashier states
+      cart.value = []
+      discountInput.value = 0
+      showCheckoutModal.value = false
+      showSuccessModal.value = true
+
+      // Refresh store products locally (deduct stocks)
+      state.products = state.products.map(p => {
+        const cartItem = itemsCopy.find(item => item.product.id === p.id)
+        if (cartItem) {
+          p.stock = Math.max(0, p.stock - cartItem.quantity)
+        }
+        return p
+      })
+
+      // Show success modal for 1.8 seconds, then show receipt
+      setTimeout(() => {
+        showSuccessModal.value = false
+        showReceiptModal.value = true
+
+        // Check if auto-print receipt is enabled
+        const autoPrint = JSON.parse(localStorage.getItem('shop_auto_print') || 'true')
+        if (autoPrint && state.printerPaired) {
+          setTimeout(() => {
+            printReceipt()
+          }, 400)
+        }
+      }, 1800)
+    } else {
+      alert(resData.message || 'Gagal menyimpan transaksi!')
+    }
+  } catch (error) {
+    console.error('Error completing payment:', error)
+    alert('Terjadi kesalahan jaringan saat memproses transaksi!')
+  }
+}
+
+const printReceipt = () => {
+  window.print()
 }
 
 const clearCart = () => {
@@ -511,6 +616,214 @@ watch(searchProductQuery, () => {
         </div>
       </div>
     </transition>
+
+    <!-- Success Transaction Modal -->
+    <transition name="modal">
+      <div v-if="showSuccessModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom text-center py-5 px-4 animate-fade-in" style="max-width: 380px; border-radius: 16px;">
+          <div class="mb-4">
+            <div class="success-icon-wrapper mx-auto d-flex align-items-center justify-content-center bg-light-success text-success rounded-circle" style="width: 80px; height: 80px;">
+              <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem; line-height: 1;"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold text-dark mb-2">Pembayaran Berhasil!</h3>
+          <p class="text-muted mb-0 small">Transaksi telah dicatat ke sistem secara permanen.</p>
+          <div class="mt-4 text-muted small d-flex align-items-center justify-content-center gap-2">
+            <span class="spinner-border spinner-border-sm text-secondary" role="status" style="width: 14px; height: 14px;"></span>
+            <span>Mempersiapkan struk belanja...</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Receipt Modal -->
+    <transition name="modal">
+      <div v-if="showReceiptModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 460px;">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-receipt-cutoff text-primary me-2"></i>Struk Belanja
+            </h3>
+            <button @click="showReceiptModal = false; finishedTransaction = null" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom pb-3" style="max-height: 60vh; overflow-y: auto; background-color: #f8fafc;">
+            <!-- Printer status indicator inside the modal -->
+            <div class="p-3 mb-3 border-bottom bg-white d-flex align-items-center justify-content-between rounded-top-3 text-start">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-printer-fill" :class="state.printerPaired ? 'text-success' : 'text-secondary'"></i>
+                <div>
+                  <div class="fw-bold text-dark" style="font-size: 0.82rem;">Status Printer:</div>
+                  <div class="text-muted font-monospace" style="font-size: 0.72rem;">
+                    {{ state.printerPaired ? `${state.printerPairedName} (${getPrinterPaperSize()})` : 'Belum Ditautkan' }}
+                  </div>
+                </div>
+              </div>
+              <router-link to="/pengaturan-toko" class="btn btn-xs btn-outline-secondary py-0.5 px-2 text-decoration-none small text-dark border-secondary-subtle" style="font-size: 0.72rem;">
+                <i class="bi bi-gear-fill me-1"></i>Atur
+              </router-link>
+            </div>
+
+            <!-- Receipt Paper Preview -->
+            <div class="receipt-paper shadow-sm mx-auto my-2" :class="getPrinterPaperSize() === '80mm' ? 'paper-preview-80' : 'paper-preview-58'">
+              <!-- Store Identity -->
+              <div class="text-center mb-2">
+                <h4 class="receipt-store-name m-0">{{ getShopName() }}</h4>
+                <p class="receipt-store-detail m-0 mt-1">{{ getShopAddress() }}</p>
+                <p class="receipt-store-detail m-0">Telp/WA: {{ getShopWa() }}</p>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Transaction Meta -->
+              <div class="receipt-meta small text-start">
+                <div class="d-flex justify-content-between">
+                  <span>No: {{ finishedTransaction?.kode_transaksi }}</span>
+                  <span>{{ finishedTransaction?.time }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Tgl: {{ finishedTransaction?.date }}</span>
+                  <span>Kasir: {{ finishedTransaction?.cashierName }}</span>
+                </div>
+                <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'" class="d-flex justify-content-between">
+                  <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
+                  <span v-if="finishedTransaction?.customerPhone" class="text-muted">({{ finishedTransaction?.customerPhone }})</span>
+                </div>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Items List -->
+              <div class="receipt-items small text-start">
+                <div v-for="item in finishedTransaction?.items" :key="item.product.id" class="mb-2">
+                  <div class="receipt-item-name fw-semibold text-dark">{{ item.product.name }}</div>
+                  <div class="d-flex justify-content-between font-monospace text-muted mt-0.5">
+                    <span>{{ item.quantity }} x {{ formatRupiah(item.product.price) }}</span>
+                    <span>{{ formatRupiah(item.product.price * item.quantity) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Calculations -->
+              <div class="receipt-calc small font-monospace text-start">
+                <div class="d-flex justify-content-between text-dark">
+                  <span>Subtotal:</span>
+                  <span>{{ formatRupiah(finishedTransaction?.subtotal) }}</span>
+                </div>
+                <div v-if="finishedTransaction?.discount > 0" class="d-flex justify-content-between text-success">
+                  <span>Diskon:</span>
+                  <span>-{{ formatRupiah(finishedTransaction?.discount) }}</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold text-dark fs-6 my-1">
+                  <span>TOTAL:</span>
+                  <span>{{ formatRupiah(finishedTransaction?.total) }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted mt-1">
+                  <span>Bayar:</span>
+                  <span>{{ formatRupiah(finishedTransaction?.cashReceived) }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted">
+                  <span>Kembali:</span>
+                  <span>{{ formatRupiah(finishedTransaction?.cashChange) }}</span>
+                </div>
+              </div>
+
+              <div class="receipt-divider"></div>
+
+              <!-- Footer -->
+              <div class="text-center mt-3 small receipt-footer">
+                {{ getShopReceiptFooter() }}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showReceiptModal = false; finishedTransaction = null" class="btn-cancel">Tutup</button>
+            <button @click="printReceipt" class="btn-confirm d-flex align-items-center justify-content-center gap-1.5">
+              <i class="bi bi-printer-fill"></i> Cetak Struk
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Hidden Thermal Receipt Area (Only Visible During Printing) -->
+    <div v-if="finishedTransaction" id="thermal-receipt-area" :class="getPrinterPaperSize() === '80mm' ? 'paper-80mm' : 'paper-58mm'">
+      <!-- Store Identity -->
+      <div class="text-center">
+        <h4 class="receipt-store-name">{{ getShopName() }}</h4>
+        <p class="receipt-store-detail">{{ getShopAddress() }}</p>
+        <p class="receipt-store-detail">Telp/WA: {{ getShopWa() }}</p>
+      </div>
+
+      <div class="receipt-divider"></div>
+
+      <!-- Transaction Meta -->
+      <div class="receipt-meta small">
+        <div class="d-flex justify-content-between">
+          <span>No: {{ finishedTransaction?.kode_transaksi }}</span>
+          <span>{{ finishedTransaction?.time }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>Tgl: {{ finishedTransaction?.date }}</span>
+          <span>Kasir: {{ finishedTransaction?.cashierName }}</span>
+        </div>
+        <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'" class="d-flex justify-content-between">
+          <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
+          <span v-if="finishedTransaction?.customerPhone">({{ finishedTransaction?.customerPhone }})</span>
+        </div>
+      </div>
+
+      <div class="receipt-divider"></div>
+
+      <!-- Items List -->
+      <div class="receipt-items small">
+        <div v-for="item in finishedTransaction?.items" :key="item.product.id" class="mb-2 text-start">
+          <div class="receipt-item-name font-weight-bold">{{ item.product.name }}</div>
+          <div class="d-flex justify-content-between font-monospace">
+            <span>{{ item.quantity }} x {{ formatRupiah(item.product.price) }}</span>
+            <span>{{ formatRupiah(item.product.price * item.quantity) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipt-divider"></div>
+
+      <!-- Calculations -->
+      <div class="receipt-calc small font-monospace">
+        <div class="d-flex justify-content-between">
+          <span>Subtotal:</span>
+          <span>{{ formatRupiah(finishedTransaction?.subtotal) }}</span>
+        </div>
+        <div v-if="finishedTransaction?.discount > 0" class="d-flex justify-content-between">
+          <span>Diskon:</span>
+          <span>-{{ formatRupiah(finishedTransaction?.discount) }}</span>
+        </div>
+        <div class="d-flex justify-content-between font-weight-bold my-1">
+          <span>TOTAL:</span>
+          <span>{{ formatRupiah(finishedTransaction?.total) }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>Bayar:</span>
+          <span>{{ formatRupiah(finishedTransaction?.cashReceived) }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>Kembali:</span>
+          <span>{{ formatRupiah(finishedTransaction?.cashChange) }}</span>
+        </div>
+      </div>
+
+      <div class="receipt-divider"></div>
+
+      <!-- Footer -->
+      <div class="text-center mt-3 small receipt-footer">
+        {{ getShopReceiptFooter() }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -531,6 +844,179 @@ watch(searchProductQuery, () => {
   .kasir-wrapper {
     height: auto;
     padding: 20px;
+  }
+}
+
+/* Receipt styling for modal preview */
+.receipt-paper {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  padding: 16px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #1e293b;
+  border-radius: 4px;
+}
+.paper-preview-58 {
+  width: 280px;
+}
+.paper-preview-80 {
+  width: 360px;
+}
+.receipt-store-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.receipt-store-detail {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+.receipt-divider {
+  border-top: 1px dashed #cbd5e1;
+  margin: 12px 0;
+  height: 0;
+}
+.receipt-meta {
+  font-size: 0.75rem;
+  color: #475569;
+  line-height: 1.4;
+}
+.receipt-items {
+  font-size: 0.75rem;
+  color: #1e293b;
+}
+.receipt-item-name {
+  white-space: normal;
+  word-break: break-word;
+}
+.receipt-calc {
+  font-size: 0.78rem;
+  color: #1e293b;
+}
+.receipt-footer {
+  font-size: 0.72rem;
+  color: #475569;
+  font-style: italic;
+  line-height: 1.4;
+}
+#thermal-receipt-area {
+  display: none;
+}
+
+/* Success modal custom styles */
+.bg-light-success {
+  background-color: #f0fdf4;
+}
+.success-icon-wrapper i {
+  animation: pulse-check 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes pulse-check {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+</style>
+
+<style>
+/* Hide printable area on screen */
+#thermal-receipt-area {
+  display: none;
+}
+
+/* Printable CSS configuration */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide app shell */
+  .sidebar, .sidebar-wrapper, aside, .top-header-main, header, .custom-alert {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide modal and backdrop */
+  .modal-backdrop-custom {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide everything inside kasir-wrapper except the print area */
+  .kasir-wrapper > *:not(#thermal-receipt-area) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Reset main wrapper styles to prevent scroll/cutting off */
+  .kasir-wrapper {
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    margin: 0 !important;
+  }
+
+  /* Show and format thermal receipt container */
+  #thermal-receipt-area {
+    display: block !important;
+    visibility: visible !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  #thermal-receipt-area .receipt-store-name {
+    font-size: 14px !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+  }
+
+  #thermal-receipt-area .receipt-store-detail,
+  #thermal-receipt-area .receipt-meta,
+  #thermal-receipt-area .receipt-items,
+  #thermal-receipt-area .receipt-calc,
+  #thermal-receipt-area .receipt-footer {
+    font-size: 11px !important;
+    color: #000000 !important;
+  }
+
+  #thermal-receipt-area .receipt-divider {
+    border-top: 1px dashed #000000 !important;
+    margin: 8px 0 !important;
+  }
+
+  /* Paper sizes */
+  .paper-58mm {
+    width: 58mm !important;
+    max-width: 58mm !important;
+  }
+
+  .paper-80mm {
+    width: 80mm !important;
+    max-width: 80mm !important;
+  }
+
+  /* Browser print default override */
+  @page {
+    margin: 0 !important;
+    size: auto;
   }
 }
 </style>

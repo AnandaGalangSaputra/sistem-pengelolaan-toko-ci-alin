@@ -131,6 +131,15 @@ export const waTemplates = [
   }
 ]
 
+const parseUtcToLocal = (dateStr) => {
+  if (!dateStr) return new Date()
+  if (dateStr.includes('Z') || dateStr.includes('+')) {
+    return new Date(dateStr)
+  }
+  const normalized = dateStr.replace(' ', 'T') + 'Z'
+  return new Date(normalized)
+}
+
 // Initialize state from localStorage or defaults
 const loadState = (key, defaultVal) => {
   const data = localStorage.getItem(key)
@@ -227,7 +236,7 @@ export const fetchTransactions = async () => {
     const resData = await response.json()
     if (resData.success) {
       state.transactions = resData.data.map(item => {
-        const dateObj = new Date(item.tanggal)
+        const dateObj = parseUtcToLocal(item.tanggal)
         const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
         const itemsCount = item.details ? item.details.reduce((sum, d) => sum + d.qty, 0) : 0
         
@@ -248,7 +257,7 @@ export const fetchTransactions = async () => {
           id: item.id,
           kode_transaksi: item.kode_transaksi,
           time: timeStr,
-          date: item.tanggal,
+          date: dateObj.toISOString(),
           itemsCount: itemsCount,
           total: Number(item.grand_total),
           discount: Number(item.total_diskon),
