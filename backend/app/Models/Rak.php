@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Rak extends Model
 {
-    protected $fillable = ['kode_rak', 'nama_rak', 'keterangan'];
+    protected $fillable = ['kode_rak', 'nama_rak', 'keterangan', 'color'];
 
     public function barangs()
     {

@@ -5,15 +5,30 @@ import { state, addProduct, editProduct, deleteProduct } from '../store/store.js
 const successToastMsg = ref('')
 const viewMode = ref('grid') // 'grid' or 'table'
 
-// Filtered products based on search bar query
+// Filtered products based on search bar query and rack filter
 const filteredProducts = computed(() => {
-  if (!state.searchQuery) return state.products
+  let products = state.products
+  
+  if (state.selectedRackId !== null) {
+    products = products.filter(p => p.rak_id === state.selectedRackId)
+  }
+  
+  if (!state.searchQuery) return products
   const q = state.searchQuery.toLowerCase()
-  return state.products.filter(p => 
+  return products.filter(p => 
     p.name.toLowerCase().includes(q) || 
     p.rack.toLowerCase().includes(q)
   )
 })
+
+const activeRackName = computed(() => {
+  const rack = state.racks.find(r => r.id === state.selectedRackId)
+  return rack ? rack.nama_rak : ''
+})
+
+const clearRackFilter = () => {
+  state.selectedRackId = null
+}
 
 // Pagination state
 const currentPage = ref(1)
@@ -276,6 +291,21 @@ const onImageUpload = (event) => {
       </div>
     </div>
 
+    <!-- Active Rack Filter Badge -->
+    <div v-if="state.selectedRackId !== null" class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-3 mb-4 rounded-4" style="background-color: #f0f7ff; color: #1e3a8a;">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-funnel-fill fs-5 text-primary"></i>
+        <div>
+          Menampilkan barang di <strong>{{ activeRackName }}</strong>
+          <span class="text-muted ms-2">({{ filteredProducts.length }} produk ditemukan)</span>
+        </div>
+      </div>
+      <button @click="clearRackFilter" class="btn btn-sm btn-outline-primary-custom rounded-3 py-1 px-3 d-flex align-items-center gap-1">
+        <i class="bi bi-x-lg"></i>
+        <span>Hapus Filter</span>
+      </button>
+    </div>
+
     <!-- Tampilan 1: Grid Card Bergambar (Default) -->
     <div v-if="viewMode === 'grid'">
       <div class="row g-4">
@@ -478,8 +508,13 @@ const onImageUpload = (event) => {
 
             <div class="row g-3 mb-3">
               <div class="col-4">
-                <label for="addRack" class="form-label-style">Lokasi Rak</label>
-                <input type="text" id="addRack" v-model="formRack" list="rackList" class="form-control-style" placeholder="Contoh: Rak B-3" />
+                <label for="addRack" class="form-label-style">Lokasi Rak <span class="text-danger">*</span></label>
+                <select id="addRack" v-model="formRack" class="form-control-style" required>
+                  <option value="" disabled>Pilih Rak...</option>
+                  <option v-for="r in state.racks" :key="r.id" :value="r.nama_rak">
+                    {{ r.nama_rak }}
+                  </option>
+                </select>
               </div>
               <div class="col-4">
                 <label for="addCost" class="form-label-style">Harga Beli (Rp)</label>
@@ -544,8 +579,13 @@ const onImageUpload = (event) => {
 
             <div class="row g-3 mb-3">
               <div class="col-4">
-                <label for="editRack" class="form-label-style">Lokasi Rak</label>
-                <input type="text" id="editRack" v-model="formRack" list="rackList" class="form-control-style" />
+                <label for="editRack" class="form-label-style">Lokasi Rak <span class="text-danger">*</span></label>
+                <select id="editRack" v-model="formRack" class="form-control-style" required>
+                  <option value="" disabled>Pilih Rak...</option>
+                  <option v-for="r in state.racks" :key="r.id" :value="r.nama_rak">
+                    {{ r.nama_rak }}
+                  </option>
+                </select>
               </div>
               <div class="col-4">
                 <label for="editCost" class="form-label-style">Harga Beli (Rp)</label>
@@ -577,10 +617,7 @@ const onImageUpload = (event) => {
       </div>
     </transition>
 
-    <!-- Datalist for rack suggestions -->
-    <datalist id="rackList">
-      <option v-for="r in state.racks" :key="r.id" :value="r.nama_rak" />
-    </datalist>
+
   </div>
 </template>
 

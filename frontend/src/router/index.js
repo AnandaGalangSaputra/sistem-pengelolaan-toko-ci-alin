@@ -41,6 +41,11 @@ const routes = [
         component: () => import('../views/BroadcastWA.vue')
       },
       {
+        path: 'daftar-rak',
+        name: 'DaftarRak',
+        component: () => import('../views/DaftarRak.vue')
+      },
+      {
         path: 'laporan',
         name: 'LaporanTransaksi',
         component: () => import('../views/LaporanTransaksi.vue')

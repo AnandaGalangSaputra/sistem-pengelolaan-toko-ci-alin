@@ -251,4 +251,122 @@ class BarangController extends Controller
             'data' => $barang
         ]);
     }
+
+    /**
+     * Store a new rack.
+     */
+    public function storeRak(Request $request)
+    {
+        if (!Auth::check() || Auth::user()->role !== 'owner') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Owner yang memiliki akses!'
+            ], 403);
+        }
+
+        $request->validate([
+            'nama_rak' => 'required|string|max:255|unique:raks,nama_rak',
+            'keterangan' => 'nullable|string',
+            'color' => 'nullable|string|max:50'
+        ]);
+
+        $rackName = trim($request->nama_rak);
+        $kode_rak = 'RAK-' . strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $rackName));
+        if ($kode_rak === 'RAK-') {
+            $kode_rak = 'RAK-' . strtoupper(Str::random(5));
+        }
+        
+        $count = Rak::where('kode_rak', $kode_rak)->count();
+        if ($count > 0) {
+            $kode_rak .= '-' . rand(10, 99);
+        }
+
+        $rak = Rak::create([
+            'nama_rak' => $rackName,
+            'kode_rak' => $kode_rak,
+            'keterangan' => $request->keterangan,
+            'color' => $request->color
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rak berhasil ditambahkan!',
+            'data' => $rak
+        ]);
+    }
+
+    /**
+     * Update a rack.
+     */
+    public function updateRak(Request $request, $id)
+    {
+        if (!Auth::check() || Auth::user()->role !== 'owner') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Owner yang memiliki akses!'
+            ], 403);
+        }
+
+        $rak = Rak::find($id);
+        if (!$rak) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rak tidak ditemukan!'
+            ], 404);
+        }
+
+        $request->validate([
+            'nama_rak' => 'required|string|max:255|unique:raks,nama_rak,' . $id,
+            'keterangan' => 'nullable|string',
+            'color' => 'nullable|string|max:50'
+        ]);
+
+        $rackName = trim($request->nama_rak);
+        $rak->nama_rak = $rackName;
+        $rak->keterangan = $request->keterangan;
+        $rak->color = $request->color;
+        $rak->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rak berhasil diperbarui!',
+            'data' => $rak
+        ]);
+    }
+
+    /**
+     * Delete a rack.
+     */
+    public function destroyRak($id)
+    {
+        if (!Auth::check() || Auth::user()->role !== 'owner') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Owner yang memiliki akses!'
+            ], 403);
+        }
+
+        $rak = Rak::find($id);
+        if (!$rak) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rak tidak ditemukan!'
+            ], 404);
+        }
+
+        $hasProducts = Barang::where('rak_id', $id)->exists();
+        if ($hasProducts) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rak tidak dapat dihapus karena masih berisi barang! Silakan pindahkan barang ke rak lain terlebih dahulu.'
+            ], 400);
+        }
+
+        $rak->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rak berhasil dihapus!'
+        ]);
+    }
 }

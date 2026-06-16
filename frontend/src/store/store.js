@@ -165,6 +165,7 @@ const mapProductFromBackend = (item) => {
 export const state = reactive({
   products: loadState('toko_alin_products', []),
   racks: [],
+  selectedRackId: null,
   discounts: loadState('toko_alin_discounts', DEFAULT_DISCOUNTS),
   transactions: loadState('toko_alin_transactions', DEFAULT_TRANSACTIONS),
   customers: loadState('toko_alin_customers', DEFAULT_CUSTOMERS),
@@ -201,6 +202,18 @@ export const fetchRacks = async () => {
     })
     const resData = await response.json()
     if (resData.success) {
+      const savedOrder = localStorage.getItem('toko_alin_rack_order')
+      if (savedOrder) {
+        const orderIds = JSON.parse(savedOrder)
+        resData.data.sort((a, b) => {
+          const idxA = orderIds.indexOf(a.id)
+          const idxB = orderIds.indexOf(b.id)
+          if (idxA === -1 && idxB === -1) return 0
+          if (idxA === -1) return 1
+          if (idxB === -1) return -1
+          return idxA - idxB
+        })
+      }
       state.racks = resData.data
     }
   } catch (error) {
@@ -252,6 +265,94 @@ export const fetchTransactions = async () => {
     }
   } catch (error) {
     console.error('Error fetching transactions:', error)
+  }
+}
+
+export const addRack = async (nama_rak, keterangan = '', color = null) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/raks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ nama_rak, keterangan, color })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      state.racks.push(resData.data)
+      state.racks.sort((a, b) => a.nama_rak.localeCompare(b.nama_rak))
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menambahkan rak.' }
+    }
+  } catch (error) {
+    console.error('Error adding rack:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat menambahkan rak!' }
+  }
+}
+
+export const editRack = async (id, nama_rak, keterangan = '', color = null) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/raks/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ nama_rak, keterangan, color })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.racks.findIndex(r => r.id === id)
+      if (idx !== -1) {
+        state.racks[idx] = resData.data
+      }
+      state.racks.sort((a, b) => a.nama_rak.localeCompare(b.nama_rak))
+      
+      // Update local products cache to reflect new rack name
+      state.products.forEach(p => {
+        if (p.rak_id === id) {
+          p.rack = resData.data.nama_rak
+        }
+      })
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal mengubah nama rak.' }
+    }
+  } catch (error) {
+    console.error('Error editing rack:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat mengubah nama rak!' }
+  }
+}
+
+export const deleteRack = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/raks/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.racks.findIndex(r => r.id === id)
+      if (idx !== -1) {
+        state.racks.splice(idx, 1)
+      }
+      if (state.selectedRackId === id) {
+        state.selectedRackId = null
+      }
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menghapus rak.' }
+    }
+  } catch (error) {
+    console.error('Error deleting rack:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat menghapus rak!' }
   }
 }
 
@@ -636,5 +737,6 @@ export const logoutUser = async () => {
   localStorage.removeItem('toko_alin_user')
   state.products = []
   state.racks = []
+  state.selectedRackId = null
   state.transactions = []
 }

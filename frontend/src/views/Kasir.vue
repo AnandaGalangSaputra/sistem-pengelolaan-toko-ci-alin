@@ -7,13 +7,28 @@ const cart = ref([])
 const discountInput = ref(0)
 const successToastMsg = ref('')
 
-// Filter products based on search query in cashier panel
+// Filter products based on search query and rack filter in cashier panel
 const availableProducts = computed(() => {
+  let products = state.products.filter(p => p.stock > 0)
+  
+  if (state.selectedRackId !== null) {
+    products = products.filter(p => p.rak_id === state.selectedRackId)
+  }
+  
   const q = searchProductQuery.value.toLowerCase()
-  return state.products.filter(p => 
-    p.stock > 0 && (p.name.toLowerCase().includes(q) || p.rack.toLowerCase().includes(q))
+  return products.filter(p => 
+    p.name.toLowerCase().includes(q) || p.rack.toLowerCase().includes(q)
   )
 })
+
+const activeRackName = computed(() => {
+  const rack = state.racks.find(r => r.id === state.selectedRackId)
+  return rack ? rack.nama_rak : ''
+})
+
+const clearRackFilter = () => {
+  state.selectedRackId = null
+}
 
 // Add product to cart
 const addToCart = (product) => {
@@ -235,6 +250,21 @@ watch(searchProductQuery, () => {
                 style="height: 36px; padding-left: 36px !important;"
               />
             </div>
+          </div>
+
+          <!-- Active Rack Filter Badge -->
+          <div v-if="state.selectedRackId !== null" class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-2.5 mb-3 rounded-3" style="background-color: #f0f7ff; color: #1e3a8a; font-size: 0.85rem;">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-funnel-fill text-primary"></i>
+              <div>
+                Rak: <strong>{{ activeRackName }}</strong>
+                <span class="text-muted ms-2">({{ availableProducts.length }} barang tersedia)</span>
+              </div>
+            </div>
+            <button @click="clearRackFilter" class="btn btn-sm btn-outline-primary-custom rounded-3 py-0.5 px-2 d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+              <i class="bi bi-x-lg"></i>
+              <span>Hapus Filter</span>
+            </button>
           </div>
 
           <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">

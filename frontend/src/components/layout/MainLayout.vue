@@ -43,6 +43,7 @@ const sidebarMenu = computed(() => {
     { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-1x2-fill', active: route.name === 'DashboardKaryawan' },
     { id: 'data-barang', label: 'Data Barang', icon: 'bi-box-seam', active: route.name === 'DataBarang' },
     { id: 'stok-barang', label: 'Stok Barang', icon: 'bi-journal-bookmark', active: route.name === 'StokBarang' },
+    { id: 'daftar-rak', label: 'Daftar Rak', icon: 'bi-grid-3x3', active: route.name === 'DaftarRak' },
     { id: 'kasir', label: 'Kasir', icon: 'bi-calculator', active: route.name === 'Kasir' },
     { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' }
   ]
@@ -63,6 +64,7 @@ const changeMenu = (menuId) => {
   else if (menuId === 'stok-barang') router.push('/dashboard-karyawan/stok-barang')
   else if (menuId === 'kasir') router.push('/dashboard-karyawan/kasir')
   else if (menuId === 'broadcast') router.push('/dashboard-karyawan/broadcast')
+  else if (menuId === 'daftar-rak') router.push('/dashboard-karyawan/daftar-rak')
   else if (menuId === 'laporan') router.push('/dashboard-karyawan/laporan')
   else if (menuId === 'pengaturan') router.push('/dashboard-karyawan/pengaturan')
   else if (menuId === 'akun') router.push('/dashboard-karyawan/akun')

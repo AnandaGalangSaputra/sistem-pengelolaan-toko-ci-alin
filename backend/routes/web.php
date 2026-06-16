@@ -24,6 +24,9 @@ Route::get('/api/me', [AuthController::class, 'apiMe']);
 
 Route::get('/api/barangs', [App\Http\Controllers\BarangController::class, 'index']);
 Route::get('/api/raks', [App\Http\Controllers\BarangController::class, 'raks']);
+Route::post('/api/raks', [App\Http\Controllers\BarangController::class, 'storeRak']);
+Route::put('/api/raks/{id}', [App\Http\Controllers\BarangController::class, 'updateRak']);
+Route::delete('/api/raks/{id}', [App\Http\Controllers\BarangController::class, 'destroyRak']);
 Route::post('/api/barangs', [App\Http\Controllers\BarangController::class, 'store']);
 Route::put('/api/barangs/{id}', [App\Http\Controllers\BarangController::class, 'update']);
 Route::delete('/api/barangs/{id}', [App\Http\Controllers\BarangController::class, 'destroy']);

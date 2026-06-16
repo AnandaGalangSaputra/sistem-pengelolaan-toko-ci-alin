@@ -5,15 +5,30 @@ import RestockModal from '../components/modals/RestockModal.vue'
 
 const successToastMsg = ref('')
 
-// Filtered products based on search bar query
+// Filtered products based on search bar query and rack filter
 const filteredProducts = computed(() => {
-  if (!state.searchQuery) return state.products
+  let products = state.products
+  
+  if (state.selectedRackId !== null) {
+    products = products.filter(p => p.rak_id === state.selectedRackId)
+  }
+  
+  if (!state.searchQuery) return products
   const q = state.searchQuery.toLowerCase()
-  return state.products.filter(p => 
-    p.name.toLowerCase().includes(q) || 
+  return products.filter(p =>
+    p.name.toLowerCase().includes(q) ||
     p.rack.toLowerCase().includes(q)
   )
 })
+
+const activeRackName = computed(() => {
+  const rack = state.racks.find(r => r.id === state.selectedRackId)
+  return rack ? rack.nama_rak : ''
+})
+
+const clearRackFilter = () => {
+  state.selectedRackId = null
+}
 
 // Metrics for stock
 const totalProducts = computed(() => state.products.length)
@@ -128,7 +143,8 @@ watch(() => state.searchQuery, () => {
   <div class="stok-barang-wrapper">
     <!-- Success Toast Alert -->
     <transition name="fade">
-      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow" role="alert">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow"
+        role="alert">
         <i class="bi bi-check-circle-fill me-2 fs-5"></i>
         <div>{{ successToastMsg }}</div>
       </div>
@@ -138,6 +154,21 @@ watch(() => state.searchQuery, () => {
     <div class="content-header mb-4">
       <h1 class="page-title">Stok Barang & Lokasi Rak</h1>
       <p class="page-subtitle">Pantau jumlah persediaan barang, batas minimum limit, dan koordinat rak fisik toko.</p>
+    </div>
+
+    <!-- Active Rack Filter Badge -->
+    <div v-if="state.selectedRackId !== null" class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-3 mb-4 rounded-4" style="background-color: #f0f7ff; color: #1e3a8a;">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-funnel-fill fs-5 text-primary"></i>
+        <div>
+          Menampilkan barang di <strong>{{ activeRackName }}</strong>
+          <span class="text-muted ms-2">({{ filteredProducts.length }} produk ditemukan)</span>
+        </div>
+      </div>
+      <button @click="clearRackFilter" class="btn btn-sm btn-outline-primary-custom rounded-3 py-1 px-3 d-flex align-items-center gap-1">
+        <i class="bi bi-x-lg"></i>
+        <span>Hapus Filter</span>
+      </button>
     </div>
 
     <!-- Stock Metrics Grid -->
@@ -208,16 +239,19 @@ watch(() => state.searchQuery, () => {
               <th style="width: 60px;">No</th>
               <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
                 Nama Barang
-                <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th>Lokasi Rak</th>
               <th @click="toggleSort('stock')" style="cursor: pointer; user-select: none;">
                 Stok Saat Ini
-                <i class="bi ms-1" :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th @click="toggleSort('limit')" style="cursor: pointer; user-select: none;">
                 Batas Limit
-                <i class="bi ms-1" :class="sortBy.startsWith('limit') ? (sortBy === 'limit-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('limit') ? (sortBy === 'limit-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th>Status</th>
               <th style="width: 150px;" class="text-center">Aksi</th>
@@ -261,14 +295,18 @@ watch(() => state.searchQuery, () => {
       </div>
 
       <!-- Pagination Controls -->
-      <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
+      <div v-if="totalPages > 1"
+        class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
         <div class="text-muted small">
-          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, filteredProducts.length) }}</strong> dari <strong>{{ filteredProducts.length }}</strong> barang
+          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage *
+            itemsPerPage, filteredProducts.length) }}</strong> dari <strong>{{ filteredProducts.length }}</strong>
+          barang
         </div>
         <nav aria-label="Page navigation">
           <ul class="pagination pagination-sm mb-0">
             <li class="page-item" :class="{ disabled: currentPage === 1 }">
-              <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1" aria-label="Previous">
+              <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1"
+                aria-label="Previous">
                 <i class="bi bi-chevron-left"></i>
               </button>
             </li>
@@ -276,7 +314,8 @@ watch(() => state.searchQuery, () => {
               <button class="page-link" @click="currentPage = page">{{ page }}</button>
             </li>
             <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-              <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages" aria-label="Next">
+              <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages"
+                aria-label="Next">
                 <i class="bi bi-chevron-right"></i>
               </button>
             </li>
@@ -286,12 +325,8 @@ watch(() => state.searchQuery, () => {
     </div>
 
     <!-- Restock Modal Component -->
-    <RestockModal 
-      :show="showRestockModal" 
-      :product="selectedProd" 
-      @close="showRestockModal = false" 
-      @confirm="handleRestockConfirm" 
-    />
+    <RestockModal :show="showRestockModal" :product="selectedProd" @close="showRestockModal = false"
+      @confirm="handleRestockConfirm" />
   </div>
 </template>
 
@@ -301,10 +336,12 @@ watch(() => state.searchQuery, () => {
   overflow-y: auto;
   height: calc(100vh - 70px);
 }
+
 .icon-danger {
   background-color: #fef2f2;
   color: #ef4444;
 }
+
 @media (max-width: 991px) {
   .stok-barang-wrapper {
     height: auto;
