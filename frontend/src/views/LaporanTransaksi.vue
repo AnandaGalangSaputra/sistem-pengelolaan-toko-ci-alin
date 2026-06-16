@@ -29,10 +29,26 @@ const avgTransactionValue = computed(() => {
   return totalRevenue.value / totalTransactionsCount.value
 })
 
-// Target achievement percentage
-const salesTarget = 3000000
+// Target achievement percentage and editing state
+const isEditingTarget = ref(false)
+const tempTarget = ref(state.salesTarget)
+
+const saveTarget = () => {
+  if (!tempTarget.value || tempTarget.value <= 0) {
+    alert('Target harian harus bernilai positif!')
+    return
+  }
+  state.salesTarget = tempTarget.value
+  isEditingTarget.value = false
+}
+
+// Watch global target changes (e.g. from localStorage)
+watch(() => state.salesTarget, (newVal) => {
+  tempTarget.value = newVal
+})
+
 const targetPercent = computed(() => {
-  return Math.min(100, Math.round((totalRevenue.value / salesTarget) * 100))
+  return Math.min(100, Math.round((totalRevenue.value / state.salesTarget) * 100))
 })
 
 // Printing States
@@ -176,7 +192,7 @@ watch(() => state.transactions.length, () => {
               <span class="card-value text-success">{{ formatRupiah(totalRevenue) }}</span>
             </div>
             <div class="card-bottom text-muted">
-              <span>Target harian: {{ formatRupiah(salesTarget) }}</span>
+              <span>Target harian: {{ formatRupiah(state.salesTarget) }}</span>
             </div>
           </div>
         </div>
@@ -243,7 +259,38 @@ watch(() => state.transactions.length, () => {
         </div>
         <div class="text-end">
           <span class="fs-4 fw-bold text-primary">{{ targetPercent }}%</span>
-          <span class="text-muted small d-block">{{ formatRupiah(totalRevenue) }} / {{ formatRupiah(salesTarget) }}</span>
+          
+          <div class="d-flex align-items-center justify-content-end gap-1 mt-0.5" style="min-height: 25px;">
+            <span class="text-muted small">{{ formatRupiah(totalRevenue) }} / </span>
+            
+            <span v-if="!isEditingTarget" class="fw-bold text-dark small d-inline-flex align-items-center">
+              {{ formatRupiah(state.salesTarget) }}
+              <button 
+                v-if="state.currentUser?.role === 'owner'"
+                @click="isEditingTarget = true" 
+                class="btn btn-sm border-0 p-0 text-primary ms-1 d-flex align-items-center" 
+                title="Ubah Target"
+              >
+                <i class="bi bi-pencil-fill" style="font-size: 0.72rem;"></i>
+              </button>
+            </span>
+            
+            <div v-else class="d-inline-flex align-items-center gap-1">
+              <input 
+                type="number" 
+                v-model.number="tempTarget" 
+                class="form-control form-control-sm text-end px-1 fw-bold" 
+                style="font-size: 0.75rem; height: 22px; width: 95px; padding: 1px 4px;"
+                min="10000"
+              />
+              <button @click="saveTarget" class="btn btn-sm btn-success py-0 px-1 d-flex align-items-center justify-content-center" style="font-size: 0.7rem; height: 22px; width: 22px;">
+                <i class="bi bi-check"></i>
+              </button>
+              <button @click="isEditingTarget = false" class="btn btn-sm btn-light border py-0 px-1 d-flex align-items-center justify-content-center" style="font-size: 0.7rem; height: 22px; width: 22px;">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="progress" style="height: 12px; background-color: #f1f5f9; border-radius: 6px;">

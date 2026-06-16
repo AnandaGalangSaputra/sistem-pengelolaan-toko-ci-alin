@@ -1,4 +1,6 @@
 <script setup>
+import { state } from '../../store/store.js'
+
 defineProps({
   totalActiveProducts: Number,
   lowStockCount: Number,
@@ -81,7 +83,7 @@ const formatRupiah = (val) => {
             <span class="card-value">{{ formatRupiah(totalRevenueToday) }}</span>
           </div>
           <div class="card-bottom text-muted">
-            <span>Target: Rp 3.000.000</span>
+            <span>Target: {{ formatRupiah(state.salesTarget) }}</span>
           </div>
         </div>
       </div>

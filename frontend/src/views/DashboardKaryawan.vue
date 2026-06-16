@@ -77,15 +77,18 @@ const submitDiscountRequest = () => {
 }
 
 // Chart Interactive Data
-const weeklySalesData = [
-  { day: 'Senin', sales: 1200000, label: 'Rp 1.2M' },
-  { day: 'Selasa', sales: 1800000, label: 'Rp 1.8M' },
-  { day: 'Rabu', sales: 1500000, label: 'Rp 1.5M' },
-  { day: 'Kamis', sales: 2100000, label: 'Rp 2.1M' },
-  { day: 'Jumat', sales: 2450000, label: 'Rp 2.45M' },
-  { day: 'Sabtu', sales: 3100000, label: 'Rp 3.1M' },
-  { day: 'Minggu', sales: 2900000, label: 'Rp 2.9M' }
-]
+const weeklySalesData = computed(() => {
+  const todayTransactionsSales = state.transactions.reduce((acc, tx) => acc + tx.total, 0)
+  return [
+    { day: 'Senin', sales: 1200000, label: 'Rp 1.2M' },
+    { day: 'Selasa', sales: 1800000, label: 'Rp 1.8M' },
+    { day: 'Rabu', sales: 1500000 + todayTransactionsSales, label: formatRupiah(1500000 + todayTransactionsSales) },
+    { day: 'Kamis', sales: 2100000, label: 'Rp 2.1M' },
+    { day: 'Jumat', sales: 2450000, label: 'Rp 2.45M' },
+    { day: 'Sabtu', sales: 3100000, label: 'Rp 3.1M' },
+    { day: 'Minggu', sales: 2900000, label: 'Rp 2.9M' }
+  ]
+})
 
 const formatRupiah = (val) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)

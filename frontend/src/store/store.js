@@ -164,6 +164,7 @@ export const state = reactive({
   currentUser: loadState('toko_alin_user', null),
   printerPaired: loadState('toko_alin_printer_paired', false),
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
+  salesTarget: loadState('toko_alin_sales_target', 3000000),
   searchQuery: ''
 })
 
@@ -265,6 +266,10 @@ watch(() => state.printerPaired, (newVal) => {
 
 watch(() => state.printerPairedName, (newVal) => {
   localStorage.setItem('toko_alin_printer_paired_name', JSON.stringify(newVal))
+})
+
+watch(() => state.salesTarget, (newVal) => {
+  localStorage.setItem('toko_alin_sales_target', JSON.stringify(newVal))
 })
 
 // State Mutation helpers (calling Backend REST APIs)
