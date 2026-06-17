@@ -38,6 +38,7 @@ const criticalStockCount = computed(() => state.products.filter(p => p.stock <= 
 // Restock modal handling
 const showRestockModal = ref(false)
 const selectedProd = ref(null)
+const isLoading = ref(false)
 
 const openRestock = (product) => {
   selectedProd.value = product
@@ -45,13 +46,18 @@ const openRestock = (product) => {
 }
 
 const handleRestockConfirm = async (productId, amount) => {
-  const success = await restockProduct(productId, amount)
-  if (success) {
-    const prod = state.products.find(p => p.id === productId)
-    triggerToast(`Berhasil menambahkan ${amount} unit ke stok "${prod.name}"!`)
+  isLoading.value = true
+  try {
+    const success = await restockProduct(productId, amount)
+    if (success) {
+      const prod = state.products.find(p => p.id === productId)
+      triggerToast(`Berhasil menambahkan ${amount} unit ke stok "${prod.name}"!`)
+    }
+    showRestockModal.value = false
+    selectedProd.value = null
+  } finally {
+    isLoading.value = false
   }
-  showRestockModal.value = false
-  selectedProd.value = null
 }
 
 const triggerToast = (msg) => {
@@ -325,7 +331,7 @@ watch(() => state.searchQuery, () => {
     </div>
 
     <!-- Restock Modal Component -->
-    <RestockModal :show="showRestockModal" :product="selectedProd" @close="showRestockModal = false"
+    <RestockModal :show="showRestockModal" :product="selectedProd" :is-loading="isLoading" @close="showRestockModal = false"
       @confirm="handleRestockConfirm" />
   </div>
 </template>

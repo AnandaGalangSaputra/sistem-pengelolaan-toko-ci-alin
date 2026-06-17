@@ -99,6 +99,7 @@ const cashReceived = ref('')
 const customerName = ref('')
 const customerPhone = ref('')
 const paymentMethod = ref('Tunai') // 'Tunai' | 'QRIS'
+const isCompletingPayment = ref(false)
 
 const getShopName = () => {
   const saved = localStorage.getItem('shop_name')
@@ -318,6 +319,7 @@ const completePayment = async () => {
   const cashChangeVal = paymentMethod.value === 'QRIS' ? 0 : cashChange.value
   const metodePembayaran = paymentMethod.value
 
+  isCompletingPayment.value = true
   try {
     const response = await fetch('http://localhost:8000/api/transaksi', {
       method: 'POST',
@@ -393,6 +395,8 @@ const completePayment = async () => {
   } catch (error) {
     console.error('Error completing payment:', error)
     alert('Terjadi kesalahan jaringan saat memproses transaksi!')
+  } finally {
+    isCompletingPayment.value = false
   }
 }
 
@@ -904,16 +908,19 @@ watch(searchProductQuery, () => {
           <div class="modal-footer-custom border-top">
             <button
               @click="showCheckoutModal = false; stopQrisPolling()"
+              :disabled="isCompletingPayment"
               class="btn-cancel"
             >Kembali</button>
             <!-- Tunai: show confirm button -->
             <button
               v-if="paymentMethod === 'Tunai'"
               @click="completePayment"
-              :disabled="!isPaymentReady"
+              :disabled="!isPaymentReady || isCompletingPayment"
               class="btn-confirm"
             >
-              <i class="bi bi-cash-coin"></i> Konfirmasi Selesai
+              <span v-if="isCompletingPayment" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <i v-else class="bi bi-cash-coin me-1"></i>
+              {{ isCompletingPayment ? 'Memproses...' : 'Konfirmasi Selesai' }}
             </button>
             <!-- QRIS: show waiting/done indicator instead of manual button -->
             <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'pending'" class="text-muted small ms-auto d-flex align-items-center gap-1">

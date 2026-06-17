@@ -14,17 +14,25 @@ const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
+const isSavingProfile = ref(false)
+const isChangingPassword = ref(false)
+
 const updateProfile = async () => {
   if (!formName.value) {
     alert('Nama tidak boleh kosong!')
     return
   }
 
-  const result = await updateProfileStore(formName.value, formRole.value)
-  if (result.success) {
-    triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
-  } else {
-    alert(result.message)
+  isSavingProfile.value = true
+  try {
+    const result = await updateProfileStore(formName.value, formRole.value)
+    if (result.success) {
+      triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
+    } else {
+      alert(result.message)
+    }
+  } finally {
+    isSavingProfile.value = false
   }
 }
 
@@ -39,16 +47,21 @@ const changePassword = async () => {
     return
   }
 
-  const result = await updatePasswordStore(currentPassword.value, newPassword.value)
-  if (result.success) {
-    // Clear inputs
-    currentPassword.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
+  isChangingPassword.value = true
+  try {
+    const result = await updatePasswordStore(currentPassword.value, newPassword.value)
+    if (result.success) {
+      // Clear inputs
+      currentPassword.value = ''
+      newPassword.value = ''
+      confirmPassword.value = ''
 
-    triggerToast('Kata sandi berhasil diperbarui secara permanen!')
-  } else {
-    alert(result.message)
+      triggerToast('Kata sandi berhasil diperbarui secara permanen!')
+    } else {
+      alert(result.message)
+    }
+  } finally {
+    isChangingPassword.value = false
   }
 }
 
@@ -110,8 +123,10 @@ const triggerToast = (msg) => {
               <span>Anda dapat mengubah peran akses antara **Owner** dan **Karyawan** secara langsung untuk mensimulasikan hak akses menu sidebar.</span>
             </div>
 
-            <button type="submit" class="btn btn-primary-custom px-4 py-2.5">
-              <i class="bi bi-person-check-fill me-2"></i>Simpan Profil
+            <button type="submit" :disabled="isSavingProfile" class="btn btn-primary-custom px-4 py-2.5">
+              <span v-if="isSavingProfile" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <i v-else class="bi bi-person-check-fill me-2"></i>
+              {{ isSavingProfile ? 'Menyimpan...' : 'Simpan Profil' }}
             </button>
           </form>
         </div>
@@ -141,8 +156,10 @@ const triggerToast = (msg) => {
               <input type="password" id="confirmPass" v-model="confirmPassword" class="form-control-style" placeholder="Ulangi password baru..." required />
             </div>
 
-            <button type="submit" class="btn btn-outline-primary-custom w-100 py-2.5">
-              <i class="bi bi-shield-lock-fill me-2"></i>Perbarui Sandi
+            <button type="submit" :disabled="isChangingPassword" class="btn btn-outline-primary-custom w-100 py-2.5">
+              <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <i v-else class="bi bi-shield-lock-fill me-2"></i>
+              {{ isChangingPassword ? 'Memperbarui...' : 'Perbarui Sandi' }}
             </button>
           </form>
         </div>

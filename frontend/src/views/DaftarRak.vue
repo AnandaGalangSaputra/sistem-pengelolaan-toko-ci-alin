@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { state, addRack, editRack, deleteRack } from '../store/store.js'
 
+const isLoading = ref(false)
+
 const router = useRouter()
 
 const successToastMsg = ref('')
@@ -190,18 +192,23 @@ const submitAdd = async () => {
     return
   }
   
-  const result = await addRack(formNamaRak.value, formKeterangan.value, formColor.value)
-  if (result.success) {
-    showAddModal.value = false
-    triggerToast(`Rak "${formNamaRak.value}" berhasil ditambahkan!`)
-    
-    // Auto select new rack
-    const newRak = state.racks[state.racks.length - 1]
-    if (newRak) {
-      selectedRackId.value = newRak.id
+  isLoading.value = true
+  try {
+    const result = await addRack(formNamaRak.value, formKeterangan.value, formColor.value)
+    if (result.success) {
+      showAddModal.value = false
+      triggerToast(`Rak "${formNamaRak.value}" berhasil ditambahkan!`)
+      
+      // Auto select new rack
+      const newRak = state.racks[state.racks.length - 1]
+      if (newRak) {
+        selectedRackId.value = newRak.id
+      }
+    } else {
+      alert(result.message)
     }
-  } else {
-    alert(result.message)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -220,12 +227,17 @@ const submitEdit = async () => {
     return
   }
   
-  const result = await editRack(selectedRack.value.id, formNamaRak.value, formKeterangan.value, formColor.value)
-  if (result.success) {
-    showEditModal.value = false
-    triggerToast(`Rak "${formNamaRak.value}" berhasil diperbarui!`)
-  } else {
-    alert(result.message)
+  isLoading.value = true
+  try {
+    const result = await editRack(selectedRack.value.id, formNamaRak.value, formKeterangan.value, formColor.value)
+    if (result.success) {
+      showEditModal.value = false
+      triggerToast(`Rak "${formNamaRak.value}" berhasil diperbarui!`)
+    } else {
+      alert(result.message)
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -240,12 +252,17 @@ const confirmDelete = async () => {
   
   if (confirm(`Apakah Anda yakin ingin menghapus "${selectedRack.value.nama_rak}"?`)) {
     const deletedName = selectedRack.value.nama_rak
-    const result = await deleteRack(selectedRack.value.id)
-    if (result.success) {
-      selectedRackId.value = null
-      triggerToast(`Rak "${deletedName}" telah dihapus.`)
-    } else {
-      alert(result.message)
+    isLoading.value = true
+    try {
+      const result = await deleteRack(selectedRack.value.id)
+      if (result.success) {
+        selectedRackId.value = null
+        triggerToast(`Rak "${deletedName}" telah dihapus.`)
+      } else {
+        alert(result.message)
+      }
+    } finally {
+      isLoading.value = false
     }
   }
 }
@@ -276,7 +293,7 @@ const viewProducts = () => {
 
       <!-- Action Buttons matching User Wireframe layout -->
       <div class="d-flex gap-2 align-items-center flex-wrap">
-        <button v-if="isOwner" @click="openAddModal" class="btn btn-primary-custom py-2 px-3 d-flex align-items-center gap-2 shadow-sm">
+        <button v-if="isOwner" :disabled="isLoading" @click="openAddModal" class="btn btn-primary-custom py-2 px-3 d-flex align-items-center gap-2 shadow-sm">
           <i class="bi bi-plus-lg"></i>
           <span>Tambah Rak +</span>
         </button>
@@ -284,9 +301,9 @@ const viewProducts = () => {
         <button 
           v-if="isOwner"
           @click="openEditModal" 
-          :disabled="!selectedRackId" 
+          :disabled="!selectedRackId || isLoading" 
           class="btn py-2 px-3 d-flex align-items-center gap-2"
-          :class="selectedRackId ? 'btn-outline-primary-custom shadow-sm' : 'btn-light border text-muted cursor-not-allowed'"
+          :class="selectedRackId && !isLoading ? 'btn-outline-primary-custom shadow-sm' : 'btn-light border text-muted cursor-not-allowed'"
         >
           <i class="bi bi-pencil-square"></i>
           <span>Edit Rak</span>
@@ -295,13 +312,14 @@ const viewProducts = () => {
         <button 
           v-if="isOwner"
           @click="confirmDelete" 
-          :disabled="!selectedRackId || getProductCount(selectedRackId) > 0" 
+          :disabled="!selectedRackId || getProductCount(selectedRackId) > 0 || isLoading" 
           class="btn py-2 px-3 d-flex align-items-center gap-2"
-          :class="selectedRackId && getProductCount(selectedRackId) === 0 ? 'btn-outline-danger shadow-sm' : 'btn-light border text-muted cursor-not-allowed'"
+          :class="selectedRackId && getProductCount(selectedRackId) === 0 && !isLoading ? 'btn-outline-danger shadow-sm' : 'btn-light border text-muted cursor-not-allowed'"
           :title="selectedRackId && getProductCount(selectedRackId) > 0 ? 'Kosongkan barang di rak sebelum menghapus' : ''"
         >
-          <i class="bi bi-trash"></i>
-          <span>Hapus Rak</span>
+          <span v-if="isLoading" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          <i v-else class="bi bi-trash"></i>
+          <span>{{ isLoading ? 'Menghapus...' : 'Hapus Rak' }}</span>
         </button>
 
         <button 
@@ -496,8 +514,11 @@ const viewProducts = () => {
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button @click="showAddModal = false" class="btn-cancel">Batal</button>
-            <button @click="submitAdd" class="btn-confirm">Tambah Rak</button>
+            <button @click="showAddModal = false" :disabled="isLoading" class="btn-cancel">Batal</button>
+            <button @click="submitAdd" :disabled="isLoading" class="btn-confirm">
+              <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              {{ isLoading ? 'Menyimpan...' : 'Tambah Rak' }}
+            </button>
           </div>
         </div>
       </div>
@@ -554,8 +575,11 @@ const viewProducts = () => {
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button @click="showEditModal = false" class="btn-cancel">Batal</button>
-            <button @click="submitEdit" class="btn-confirm">Simpan Perubahan</button>
+            <button @click="showEditModal = false" :disabled="isLoading" class="btn-cancel">Batal</button>
+            <button @click="submitEdit" :disabled="isLoading" class="btn-confirm">
+              <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              {{ isLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
+            </button>
           </div>
         </div>
       </div>

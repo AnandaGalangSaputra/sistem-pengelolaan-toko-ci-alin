@@ -52,10 +52,10 @@ const totalRevenueToday = computed(() => {
   return transactionsToday.value.reduce((acc, tx) => acc + tx.total, 0)
 })
 
-// Restock Modal state
 const showRestockModal = ref(false)
 const selectedProduct = ref(null)
 const successToastMsg = ref('')
+const isRestocking = ref(false)
 
 // Trigger restock modal
 const openRestockModal = (product) => {
@@ -65,16 +65,21 @@ const openRestockModal = (product) => {
 
 // Perform restock action
 const submitRestock = async (productId, amount) => {
-  const success = await restockProduct(productId, amount)
-  if (success) {
-    const prod = state.products.find(p => p.id === productId)
-    successToastMsg.value = `Berhasil merestok ${prod.name} sebanyak ${amount} unit di ${prod.rack}!`
-    setTimeout(() => {
-      successToastMsg.value = ''
-    }, 4000)
+  isRestocking.value = true
+  try {
+    const success = await restockProduct(productId, amount)
+    if (success) {
+      const prod = state.products.find(p => p.id === productId)
+      successToastMsg.value = `Berhasil merestok ${prod.name} sebanyak ${amount} unit di ${prod.rack}!`
+      setTimeout(() => {
+        successToastMsg.value = ''
+      }, 4000)
+    }
+    showRestockModal.value = false
+    selectedProduct.value = null
+  } finally {
+    isRestocking.value = false
   }
-  showRestockModal.value = false
-  selectedProduct.value = null
 }
 
 // Quick Discount Modal state
@@ -270,7 +275,7 @@ const formatRupiah = (val) => {
     </div>
 
     <!-- Restock Item Modal -->
-    <RestockModal :show="showRestockModal" :product="selectedProduct" @close="showRestockModal = false"
+    <RestockModal :show="showRestockModal" :product="selectedProduct" :is-loading="isRestocking" @close="showRestockModal = false"
       @confirm="submitRestock" />
 
     <!-- Request Discount Modal (Direct Application Simulation) -->

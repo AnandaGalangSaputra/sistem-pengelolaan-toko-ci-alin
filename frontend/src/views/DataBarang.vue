@@ -2,6 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { state, addProduct, editProduct, deleteProduct } from '../store/store.js'
 
+const isLoading = ref(false)
+
 const successToastMsg = ref('')
 const viewMode = ref('grid') // 'grid' or 'table'
 
@@ -136,18 +138,23 @@ const submitAdd = async () => {
     alert('Harap isi nama, lokasi rak, harga jual, dan harga beli barang dengan benar!')
     return
   }
-  const success = await addProduct(
-    formName.value,
-    formRack.value,
-    formStock.value,
-    formLimit.value,
-    formPrice.value,
-    formCost.value,
-    formImage.value
-  )
-  if (success) {
-    showAddModal.value = false
-    triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
+  isLoading.value = true
+  try {
+    const success = await addProduct(
+      formName.value,
+      formRack.value,
+      formStock.value,
+      formLimit.value,
+      formPrice.value,
+      formCost.value,
+      formImage.value
+    )
+    if (success) {
+      showAddModal.value = false
+      triggerToast(`Produk "${formName.value}" berhasil ditambahkan!`)
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -180,18 +187,28 @@ const submitEdit = async () => {
     image: formImage.value
   }
 
-  const success = await editProduct(selectedProd.value.id, updated)
-  if (success) {
-    showEditModal.value = false
-    triggerToast(`Produk "${formName.value}" berhasil diperbarui!`)
+  isLoading.value = true
+  try {
+    const success = await editProduct(selectedProd.value.id, updated)
+    if (success) {
+      showEditModal.value = false
+      triggerToast(`Produk "${formName.value}" berhasil diperbarui!`)
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 
 const confirmDelete = async (product) => {
   if (confirm(`Apakah Anda yakin ingin menghapus produk "${product.name}"?`)) {
-    const success = await deleteProduct(product.id)
-    if (success) {
-      triggerToast(`Produk "${product.name}" telah dihapus!`)
+    isLoading.value = true
+    try {
+      const success = await deleteProduct(product.id)
+      if (success) {
+        triggerToast(`Produk "${product.name}" telah dihapus!`)
+      }
+    } finally {
+      isLoading.value = false
     }
   }
 }
@@ -363,10 +380,10 @@ const onImageUpload = (event) => {
 
                 <!-- Card Actions Row -->
                 <div class="d-flex gap-2 border-top pt-3" v-if="state.currentUser?.role === 'owner'">
-                  <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom flex-fill btn-sm py-1.5 px-2">
+                  <button @click="openEditModal(prod)" :disabled="isLoading" class="btn btn-outline-primary-custom flex-fill btn-sm py-1.5 px-2">
                     <i class="bi bi-pencil-square me-1"></i>Edit
                   </button>
-                  <button @click="confirmDelete(prod)" class="btn btn-sm btn-outline-danger flex-fill py-1.5 px-2 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
+                  <button @click="confirmDelete(prod)" :disabled="isLoading" class="btn btn-sm btn-outline-danger flex-fill py-1.5 px-2 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
                     <i class="bi bi-trash-fill me-1"></i>Hapus
                   </button>
                 </div>
@@ -431,10 +448,10 @@ const onImageUpload = (event) => {
               </td>
               <td v-if="state.currentUser?.role === 'owner'">
                 <div class="d-flex justify-content-center gap-2">
-                  <button @click="openEditModal(prod)" class="btn btn-outline-primary-custom btn-sm py-1 px-2.5">
+                  <button @click="openEditModal(prod)" :disabled="isLoading" class="btn btn-outline-primary-custom btn-sm py-1 px-2.5">
                     <i class="bi bi-pencil-square me-1"></i>Edit
                   </button>
-                  <button @click="confirmDelete(prod)" class="btn btn-sm btn-outline-danger py-1 px-2.5 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
+                  <button @click="confirmDelete(prod)" :disabled="isLoading" class="btn btn-sm btn-outline-danger py-1 px-2.5 rounded-3 border-danger" style="font-size: 0.8rem; font-weight: 600;">
                     <i class="bi bi-trash-fill me-1"></i>Hapus
                   </button>
                 </div>
@@ -539,8 +556,11 @@ const onImageUpload = (event) => {
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button @click="showAddModal = false" class="btn-cancel">Batal</button>
-            <button @click="submitAdd" class="btn-confirm">Tambah Produk</button>
+            <button @click="showAddModal = false" :disabled="isLoading" class="btn-cancel">Batal</button>
+            <button @click="submitAdd" :disabled="isLoading" class="btn-confirm">
+              <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              {{ isLoading ? 'Menyimpan...' : 'Tambah Produk' }}
+            </button>
           </div>
         </div>
       </div>
@@ -610,8 +630,11 @@ const onImageUpload = (event) => {
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button @click="showEditModal = false" class="btn-cancel">Batal</button>
-            <button @click="submitEdit" class="btn-confirm">Simpan Perubahan</button>
+            <button @click="showEditModal = false" :disabled="isLoading" class="btn-cancel">Batal</button>
+            <button @click="submitEdit" :disabled="isLoading" class="btn-confirm">
+              <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              {{ isLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
+            </button>
           </div>
         </div>
       </div>
