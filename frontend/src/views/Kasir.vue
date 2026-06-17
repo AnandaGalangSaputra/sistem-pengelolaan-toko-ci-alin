@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { state, addTransaction } from '../store/store.js'
 
 const parseUtcToLocal = (dateStr) => {
@@ -162,6 +162,10 @@ const stopQrisPolling = () => {
     qrisCountdownInterval.value = null
   }
 }
+
+onUnmounted(() => {
+  stopQrisPolling()
+})
 
 // Start polling Midtrans status every 3s
 const startQrisPolling = (orderId) => {
@@ -706,7 +710,7 @@ watch(searchProductQuery, () => {
             <h3 class="modal-title-custom">
               <i class="bi bi-cash-coin text-primary me-2"></i>Pembayaran Transaksi
             </h3>
-            <button @click="showCheckoutModal = false" class="btn-close-custom">
+            <button @click="showCheckoutModal = false; stopQrisPolling()" class="btn-close-custom">
               <i class="bi bi-x"></i>
             </button>
           </div>

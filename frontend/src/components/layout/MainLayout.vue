@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
@@ -16,15 +16,8 @@ onMounted(() => {
     fetchCustomers()
     fetchBroadcastHistory()
     
-    // Check WA status initially and set up 10-second polling
+    // Check WA status once on load
     checkWhatsappStatus()
-    const waInterval = setInterval(() => {
-      if (state.currentUser) {
-        checkWhatsappStatus()
-      } else {
-        clearInterval(waInterval)
-      }
-    }, 10000)
   }
 })
 
