@@ -105,11 +105,51 @@ const getShopWa = () => {
   return saved ? JSON.parse(saved) : '+62 812-3456-7890'
 }
 
+// Search state
+const searchQuery = ref('')
+
+// Helper to format date for search match
+const getReadableDate = (dateStr) => {
+  if (!dateStr) return ''
+  const dateObj = new Date(dateStr)
+  return dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+// Filter transactions by search query
+const filteredTransactions = computed(() => {
+  let list = transactionsList.value
+
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(tx => {
+      const kode = (tx.kode_transaksi || '').toLowerCase()
+      const txId = `#tx-${tx.id}`
+      const name = (tx.customer?.name || '').toLowerCase()
+      const phone = (tx.customer?.phone || '').toLowerCase()
+      const cashier = (tx.cashierName || '').toLowerCase()
+      const dateStr = getReadableDate(tx.date).toLowerCase()
+
+      return kode.includes(q) || 
+             txId.includes(q) || 
+             name.includes(q) || 
+             phone.includes(q) || 
+             cashier.includes(q) || 
+             dateStr.includes(q)
+    })
+  }
+
+  return list
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
+
 // Pagination state
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
-const totalPages = computed(() => Math.ceil(transactionsList.value.length / itemsPerPage.value))
+const totalPages = computed(() => Math.ceil(filteredTransactions.value.length / itemsPerPage.value))
 
 const paginatedTransactions = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
@@ -121,7 +161,7 @@ const paginatedTransactions = computed(() => {
 const sortBy = ref('date-desc') // default newest first
 
 const sortedTransactions = computed(() => {
-  const list = [...transactionsList.value]
+  const list = [...filteredTransactions.value]
   list.sort((a, b) => {
     if (sortBy.value === 'id-asc') {
       return a.id - b.id
@@ -366,9 +406,22 @@ const successToastMsg = ref('')
 
     <!-- Transactions List Table -->
     <div class="card-content-box shadow-sm">
-      <div class="box-header mb-3">
-        <h2 class="box-title">Daftar Log Transaksi Penjualan</h2>
-        <p class="box-subtitle">Berikut adalah rincian transaksi kasir terbaru.</p>
+      <div class="box-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+          <h2 class="box-title">Daftar Log Transaksi Penjualan</h2>
+          <p class="box-subtitle">Berikut adalah rincian transaksi kasir terbaru.</p>
+        </div>
+        <!-- Search bar specifically for transactions in reports -->
+        <div class="position-relative" style="width: 320px;">
+          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted small"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            class="form-control-style py-1.5 ps-5"
+            placeholder="Cari ID, nama pembeli, atau tanggal..." 
+            style="height: 38px; padding-left: 38px !important; border-radius: 8px;"
+          />
+        </div>
       </div>
 
       <div class="table-responsive">
@@ -448,8 +501,10 @@ const successToastMsg = ref('')
                 </button>
               </td>
             </tr>
-            <tr v-if="transactionsList.length === 0">
-              <td :colspan="isOwner ? 11 : 10" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
+            <tr v-if="filteredTransactions.length === 0">
+              <td :colspan="isOwner ? 11 : 10" class="text-center py-4 text-muted">
+                {{ transactionsList.value.length === 0 ? 'Belum ada transaksi terekam di sistem.' : 'Tidak ada transaksi yang cocok dengan pencarian Anda.' }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -458,7 +513,7 @@ const successToastMsg = ref('')
       <!-- Pagination Controls -->
       <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
         <div class="text-muted small">
-          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, transactionsList.length) }}</strong> dari <strong>{{ transactionsList.length }}</strong> transaksi
+          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, filteredTransactions.length) }}</strong> dari <strong>{{ filteredTransactions.length }}</strong> transaksi
         </div>
         <nav aria-label="Page navigation">
           <ul class="pagination pagination-sm mb-0">
