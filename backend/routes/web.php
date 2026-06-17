@@ -24,6 +24,11 @@ Route::get('/api/me', [AuthController::class, 'apiMe']);
 Route::post('/api/change-password', [AuthController::class, 'apiUpdatePassword']);
 Route::post('/api/update-profile', [AuthController::class, 'apiUpdateProfile']);
 
+Route::get('/api/users', [App\Http\Controllers\UserController::class, 'index']);
+Route::post('/api/users', [App\Http\Controllers\UserController::class, 'store']);
+Route::put('/api/users/{id}', [App\Http\Controllers\UserController::class, 'update']);
+Route::delete('/api/users/{id}', [App\Http\Controllers\UserController::class, 'destroy']);
+
 Route::get('/api/barangs', [App\Http\Controllers\BarangController::class, 'index']);
 Route::get('/api/raks', [App\Http\Controllers\BarangController::class, 'raks']);
 Route::post('/api/raks', [App\Http\Controllers\BarangController::class, 'storeRak']);

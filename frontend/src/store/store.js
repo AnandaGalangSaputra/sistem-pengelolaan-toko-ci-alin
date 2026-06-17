@@ -182,6 +182,7 @@ export const state = reactive({
   waPairedNumber: loadState('toko_alin_wa_paired_number', ''),
   broadcastHistory: [],
   currentUser: loadState('toko_alin_user', null),
+  users: [],
   printerPaired: loadState('toko_alin_printer_paired', false),
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   salesTarget: loadState('toko_alin_sales_target', 3000000),
@@ -779,6 +780,110 @@ export const deleteCustomer = async (id) => {
   }
 }
 
+export const fetchUsers = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/users', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.users = resData.data
+    }
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  }
+}
+
+export const addUser = async (name, username, password, role) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ name, username, password, role })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      state.users.push(resData.data)
+      state.users.sort((a, b) => a.name.localeCompare(b.name))
+      addNotification('Pengguna Ditambahkan', `Akun untuk "${name}" berhasil dibuat.`, 'success')
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menambahkan pengguna.' }
+    }
+  } catch (error) {
+    console.error('Error adding user:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat menambahkan pengguna!' }
+  }
+}
+
+export const editUser = async (id, updatedData) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/users/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(updatedData)
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.users.findIndex(u => u.id === id)
+      if (idx !== -1) {
+        state.users[idx] = resData.data
+      }
+      state.users.sort((a, b) => a.name.localeCompare(b.name))
+
+      // If edited user is currently logged-in owner, update current local session
+      if (state.currentUser && state.currentUser.id === id) {
+        state.currentUser.name = resData.data.name
+        state.currentUser.username = resData.data.username
+        state.currentUser.role = resData.data.role
+        localStorage.setItem('toko_alin_user', JSON.stringify(state.currentUser))
+      }
+
+      addNotification('Pengguna Diperbarui', `Informasi akun "${resData.data.name}" berhasil diubah.`, 'info')
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal memperbarui pengguna.' }
+    }
+  } catch (error) {
+    console.error('Error editing user:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat memperbarui pengguna!' }
+  }
+}
+
+export const deleteUser = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/users/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.users.findIndex(u => u.id === id)
+      if (idx !== -1) {
+        state.users.splice(idx, 1)
+      }
+      addNotification('Pengguna Dihapus', `Akun pengguna berhasil dihapus dari sistem.`, 'warning')
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menghapus pengguna.' }
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat menghapus pengguna!' }
+  }
+}
+
 export const loginUser = async (username, password) => {
   try {
     const response = await fetch('http://localhost:8000/api/login', {
@@ -802,6 +907,9 @@ export const loginUser = async (username, password) => {
       fetchTransactions()
       fetchCustomers()
       fetchBroadcastHistory()
+      if (data.user.role === 'owner') {
+        fetchUsers()
+      }
       return { success: true, user: data.user }
     } else {
       return { success: false, message: data.message || 'Username atau password salah!' }

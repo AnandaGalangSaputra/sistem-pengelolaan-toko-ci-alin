@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
-import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, fetchCustomers, fetchBroadcastHistory, checkWhatsappStatus } from '../../store/store.js'
+import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, fetchCustomers, fetchBroadcastHistory, checkWhatsappStatus, fetchUsers } from '../../store/store.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,6 +15,9 @@ onMounted(() => {
     fetchTransactions()
     fetchCustomers()
     fetchBroadcastHistory()
+    if (state.currentUser.role.toLowerCase() === 'owner') {
+      fetchUsers()
+    }
     
     // Check WA status once on load
     checkWhatsappStatus()
