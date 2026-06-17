@@ -49,6 +49,7 @@ class TransaksiController extends Controller
             'customer' => 'nullable|array',
             'customer.name' => 'nullable|string|max:255',
             'customer.phone' => 'nullable|string|max:20',
+            'metode_pembayaran' => 'nullable|string|in:Tunai,QRIS',
         ]);
 
         DB::beginTransaction();
@@ -91,6 +92,7 @@ class TransaksiController extends Controller
                 'total_harga' => $request->total_harga,
                 'total_diskon' => $request->total_diskon,
                 'grand_total' => $request->grand_total,
+                'metode_pembayaran' => $request->metode_pembayaran ?? 'Tunai',
             ]);
 
             // Save details and deduct stocks

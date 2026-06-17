@@ -373,6 +373,7 @@ watch(() => state.transactions.length, () => {
                 Total Pembayaran
                 <i class="bi ms-1" :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
+              <th>Metode Bayar</th>
               <th class="text-center">Status</th>
             </tr>
           </thead>
@@ -404,6 +405,18 @@ watch(() => state.transactions.length, () => {
                 </span>
               </td>
               <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
+              <td class="text-center">
+                <span
+                  class="badge py-1 px-2 rounded-4 fw-semibold"
+                  :class="tx.metode_pembayaran === 'QRIS'
+                    ? 'bg-primary bg-opacity-10 text-primary border border-primary'
+                    : 'bg-success bg-opacity-10 text-success border border-success'"
+                  style="font-size: 0.72rem;"
+                >
+                  <i class="bi me-1" :class="tx.metode_pembayaran === 'QRIS' ? 'bi-qr-code' : 'bi-cash-coin'"></i>
+                  {{ tx.metode_pembayaran || 'Tunai' }}
+                </span>
+              </td>
               <td class="text-center">
                 <span class="badge bg-success bg-opacity-10 text-success border border-success py-1.5 px-3 rounded-5" style="font-size: 0.72rem; font-weight: 600;">
                   <i class="bi bi-check-circle-fill me-1"></i>Selesai

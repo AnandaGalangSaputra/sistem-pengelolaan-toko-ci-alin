@@ -46,3 +46,7 @@ Route::get('/api/whatsapp/qr', [App\Http\Controllers\WhatsappController::class, 
 Route::post('/api/whatsapp/disconnect', [App\Http\Controllers\WhatsappController::class, 'disconnect']);
 Route::post('/api/whatsapp/broadcast', [App\Http\Controllers\WhatsappController::class, 'broadcast']);
 Route::get('/api/whatsapp/history', [App\Http\Controllers\WhatsappController::class, 'history']);
+
+// QRIS Midtrans Routes
+Route::post('/api/qris/create', [App\Http\Controllers\QrisController::class, 'createQris']);
+Route::get('/api/qris/status/{orderId}', [App\Http\Controllers\QrisController::class, 'checkStatus']);

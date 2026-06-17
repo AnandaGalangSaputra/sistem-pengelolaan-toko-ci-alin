@@ -263,6 +263,7 @@ export const fetchTransactions = async () => {
           discount: Number(item.total_diskon),
           cashierName: item.user ? item.user.name : 'System',
           details: details,
+          metode_pembayaran: item.metode_pembayaran || 'Tunai',
           customer: {
             name: item.nama_pelanggan || 'Umum',
             phone: item.no_telp_pelanggan || ''

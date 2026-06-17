@@ -17,6 +17,7 @@ class Transaksi extends Model
         'total_harga',
         'total_diskon',
         'grand_total',
+        'metode_pembayaran',
     ];
 
     public function details()

@@ -98,6 +98,7 @@ const finishedTransaction = ref(null)
 const cashReceived = ref('')
 const customerName = ref('')
 const customerPhone = ref('')
+const paymentMethod = ref('Tunai') // 'Tunai' | 'QRIS'
 
 const getShopName = () => {
   const saved = localStorage.getItem('shop_name')
@@ -121,10 +122,155 @@ const getPrinterPaperSize = () => {
 }
 
 const cashChange = computed(() => {
+  if (paymentMethod.value === 'QRIS') return 0
   if (!cashReceived.value) return 0
   const change = Number(cashReceived.value) - finalTotal.value
   return Math.max(0, change)
 })
+
+// QRIS Midtrans state
+const qrisOrderId = ref('')
+const qrisQrUrl = ref('')
+const qrisExpiryTime = ref('')
+const qrisStatus = ref('idle') // idle | loading | pending | settlement | expire | error
+const qrisErrorMsg = ref('')
+const qrisPollInterval = ref(null)
+const qrisSecondsLeft = ref(0)
+const qrisCountdownInterval = ref(null)
+const copiedOrderId = ref(false)
+
+const isPaymentReady = computed(() => {
+  if (paymentMethod.value === 'QRIS') return qrisStatus.value === 'settlement'
+  return cashReceived.value && Number(cashReceived.value) >= finalTotal.value
+})
+
+// Generate a unique order ID for QRIS
+const generateQrisOrderId = () => {
+  const ts = Date.now()
+  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+  return `QRIS-${ts}-${rand}`
+}
+
+// Stop polling and countdown
+const stopQrisPolling = () => {
+  if (qrisPollInterval.value) {
+    clearInterval(qrisPollInterval.value)
+    qrisPollInterval.value = null
+  }
+  if (qrisCountdownInterval.value) {
+    clearInterval(qrisCountdownInterval.value)
+    qrisCountdownInterval.value = null
+  }
+}
+
+// Start polling Midtrans status every 3s
+const startQrisPolling = (orderId) => {
+  stopQrisPolling()
+  qrisPollInterval.value = setInterval(async () => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/qris/status/${orderId}`, {
+        credentials: 'include'
+      })
+      const data = await res.json()
+      if (data.success) {
+        const txStatus = data.transaction_status
+        if (txStatus === 'settlement' || txStatus === 'capture') {
+          qrisStatus.value = 'settlement'
+          stopQrisPolling()
+          // Auto-complete the transaction
+          await completePayment()
+        } else if (txStatus === 'expire' || txStatus === 'cancel' || txStatus === 'deny') {
+          qrisStatus.value = 'expire'
+          stopQrisPolling()
+        }
+      }
+    } catch (e) {
+      console.warn('QRIS polling error:', e)
+    }
+  }, 3000)
+
+  // Countdown timer (QR expires in 15 min = 900 seconds)
+  if (qrisExpiryTime.value) {
+    const expiryMs = new Date(qrisExpiryTime.value).getTime()
+    qrisCountdownInterval.value = setInterval(() => {
+      const now = Date.now()
+      const diff = Math.max(0, Math.round((expiryMs - now) / 1000))
+      qrisSecondsLeft.value = diff
+      if (diff <= 0) {
+        qrisStatus.value = 'expire'
+        stopQrisPolling()
+      }
+    }, 1000)
+  }
+}
+
+// Initiate a real QRIS charge from Midtrans
+const initiateQrisPayment = async () => {
+  if (finalTotal.value <= 0) return
+  qrisStatus.value = 'loading'
+  qrisErrorMsg.value = ''
+  qrisQrUrl.value = ''
+
+  const newOrderId = generateQrisOrderId()
+  qrisOrderId.value = newOrderId
+
+  try {
+    const res = await fetch('http://localhost:8000/api/qris/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        order_id: newOrderId,
+        amount: finalTotal.value
+      })
+    })
+    const data = await res.json()
+    if (data.success && data.qr_string) {
+      qrisQrUrl.value = data.qr_string
+      qrisExpiryTime.value = data.expiry_time || ''
+      qrisStatus.value = 'pending'
+      // Compute seconds left
+      if (data.expiry_time) {
+        qrisSecondsLeft.value = Math.max(0, Math.round((new Date(data.expiry_time).getTime() - Date.now()) / 1000))
+      } else {
+        qrisSecondsLeft.value = 900
+      }
+      startQrisPolling(newOrderId)
+    } else {
+      qrisStatus.value = 'error'
+      qrisErrorMsg.value = data.message || 'Gagal membuat QR code'
+    }
+  } catch (e) {
+    qrisStatus.value = 'error'
+    qrisErrorMsg.value = 'Gagal terhubung ke server'
+  }
+}
+
+// Format countdown seconds to MM:SS
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0')
+  const s = (secs % 60).toString().padStart(2, '0')
+  return `${m}:${s}`
+}
+
+// Copy Order ID to clipboard
+const copyOrderId = async () => {
+  try {
+    await navigator.clipboard.writeText(qrisOrderId.value)
+    copiedOrderId.value = true
+    setTimeout(() => { copiedOrderId.value = false }, 2000)
+  } catch {
+    // fallback for older browsers
+    const el = document.createElement('textarea')
+    el.value = qrisOrderId.value
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+    copiedOrderId.value = true
+    setTimeout(() => { copiedOrderId.value = false }, 2000)
+  }
+}
 
 const openCheckout = () => {
   if (cart.value.length === 0) {
@@ -134,12 +280,25 @@ const openCheckout = () => {
   cashReceived.value = ''
   customerName.value = ''
   customerPhone.value = ''
+  paymentMethod.value = 'Tunai'
+  // Reset QRIS state
+  stopQrisPolling()
+  qrisStatus.value = 'idle'
+  qrisQrUrl.value = ''
+  qrisOrderId.value = ''
+  qrisErrorMsg.value = ''
   showCheckoutModal.value = true
 }
 
 const completePayment = async () => {
-  if (!cashReceived.value || Number(cashReceived.value) < finalTotal.value) {
-    alert('Uang pembayaran tidak mencukupi!')
+  if (paymentMethod.value === 'Tunai') {
+    if (!cashReceived.value || Number(cashReceived.value) < finalTotal.value) {
+      alert('Uang pembayaran tidak mencukupi!')
+      return
+    }
+  }
+  // For QRIS: ensure settlement confirmed before proceeding
+  if (paymentMethod.value === 'QRIS' && qrisStatus.value !== 'settlement') {
     return
   }
 
@@ -151,8 +310,9 @@ const completePayment = async () => {
   const subtotalVal = subtotal.value
   const discountVal = Number(discountInput.value || 0)
   const finalTotalVal = finalTotal.value
-  const cashReceivedVal = Number(cashReceived.value)
-  const cashChangeVal = cashChange.value
+  const cashReceivedVal = paymentMethod.value === 'QRIS' ? finalTotalVal : Number(cashReceived.value)
+  const cashChangeVal = paymentMethod.value === 'QRIS' ? 0 : cashChange.value
+  const metodePembayaran = paymentMethod.value
 
   try {
     const response = await fetch('http://localhost:8000/api/transaksi', {
@@ -170,7 +330,8 @@ const completePayment = async () => {
         total_harga: finalTotal.value + discountVal,
         total_diskon: discountVal,
         grand_total: finalTotal.value,
-        customer: customerData
+        customer: customerData,
+        metode_pembayaran: metodePembayaran
       })
     })
 
@@ -188,6 +349,7 @@ const completePayment = async () => {
         total: finalTotalVal,
         cashReceived: cashReceivedVal,
         cashChange: cashChangeVal,
+        metode_pembayaran: metodePembayaran,
         cashierName: state.currentUser?.name || 'System',
         customerName: customerData.name || 'Umum',
         customerPhone: customerData.phone || ''
@@ -550,12 +712,33 @@ watch(searchProductQuery, () => {
           </div>
 
           <div class="modal-body-custom pb-3">
-            <div class="mb-4 text-center">
+            <!-- Total header -->
+            <div class="mb-3 text-center">
               <span class="text-muted small d-block">TOTAL TAGIHAN</span>
               <span class="display-6 fw-bold text-danger">{{ formatRupiah(finalTotal) }}</span>
             </div>
 
-            <!-- Customer Identity Fields (WhatsApp broadcast logging) -->
+            <!-- Payment Method Toggle -->
+            <div class="payment-method-tabs mb-3">
+              <button
+                id="tab-tunai"
+                class="payment-tab-btn"
+                :class="{ active: paymentMethod === 'Tunai' }"
+                @click="paymentMethod = 'Tunai'; stopQrisPolling()"
+              >
+                <i class="bi bi-cash-coin me-1"></i>Tunai
+              </button>
+              <button
+                id="tab-qris"
+                class="payment-tab-btn"
+                :class="{ active: paymentMethod === 'QRIS' }"
+                @click="paymentMethod = 'QRIS'; if (qrisStatus === 'idle') initiateQrisPayment()"
+              >
+                <i class="bi bi-qr-code me-1"></i>QRIS
+              </button>
+            </div>
+
+            <!-- Customer Identity Fields -->
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label for="custName" class="form-label-style">Nama Customer (Opsional)</label>
@@ -579,39 +762,163 @@ watch(searchProductQuery, () => {
               </div>
             </div>
 
-            <div class="mb-3">
-              <label for="cashReceived" class="form-label-style">Uang Diterima (Rp)</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light border-end-0">Rp</span>
-                <input 
-                  type="number" 
-                  id="cashReceived" 
-                  v-model.number="cashReceived" 
-                  class="form-control-style border-start-0 py-2 fs-5 fw-bold" 
-                  placeholder="Masukkan jumlah uang..."
-                  required
-                />
+            <!-- Tunai Section -->
+            <div v-if="paymentMethod === 'Tunai'">
+              <div class="mb-3">
+                <label for="cashReceived" class="form-label-style">Uang Diterima (Rp)</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">Rp</span>
+                  <input 
+                    type="number" 
+                    id="cashReceived" 
+                    v-model.number="cashReceived" 
+                    class="form-control-style border-start-0 py-2 fs-5 fw-bold" 
+                    placeholder="Masukkan jumlah uang..."
+                    required
+                  />
+                </div>
+              </div>
+              <!-- Change display panel -->
+              <div class="bg-light border rounded-3 p-3 text-center">
+                <span class="text-muted small d-block mb-1">UANG KEMBALIAN</span>
+                <span class="fs-4 fw-bold" :class="cashChange >= 0 && cashReceived >= finalTotal ? 'text-success' : 'text-muted'">
+                  {{ formatRupiah(cashChange) }}
+                </span>
               </div>
             </div>
 
-            <!-- Change display panel -->
-            <div class="bg-light border rounded-3 p-3 text-center mb-3">
-              <span class="text-muted small d-block mb-1">UANG KEMBALIAN</span>
-              <span class="fs-4 fw-bold" :class="cashChange >= 0 && cashReceived >= finalTotal ? 'text-success' : 'text-muted'">
-                {{ formatRupiah(cashChange) }}
-              </span>
+            <!-- QRIS Section -->
+            <div v-if="paymentMethod === 'QRIS'" class="qris-section text-center">
+
+              <!-- Loading State -->
+              <div v-if="qrisStatus === 'loading'" class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
+                <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <span class="text-light small">Membuat QR Code QRIS...</span>
+              </div>
+
+              <!-- Error State -->
+              <div v-else-if="qrisStatus === 'error'" class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
+                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2.5rem;"></i>
+                <span class="text-light small">{{ qrisErrorMsg }}</span>
+                <button @click="initiateQrisPayment" class="qris-retry-btn">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Coba Lagi
+                </button>
+              </div>
+
+              <!-- Expired State -->
+              <div v-else-if="qrisStatus === 'expire'" class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
+                <i class="bi bi-clock-history text-warning" style="font-size: 2.5rem;"></i>
+                <span class="text-light small">QR Code sudah kedaluwarsa</span>
+                <button @click="initiateQrisPayment" class="qris-retry-btn">
+                  <i class="bi bi-qr-code me-1"></i>Buat QR Baru
+                </button>
+              </div>
+
+              <!-- Idle State (not yet initiated) -->
+              <div v-else-if="qrisStatus === 'idle'" class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
+                <button @click="initiateQrisPayment" class="qris-retry-btn">
+                  <i class="bi bi-qr-code me-1"></i>Buat QR Code
+                </button>
+              </div>
+
+              <!-- Pending / Settlement State — show real QR -->
+              <div v-else class="qris-card">
+                <div class="qris-header">
+                  <span class="qris-badge">QRIS</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span v-if="qrisStatus === 'settlement'" class="qris-status-badge settlement">
+                      <i class="bi bi-check-circle-fill me-1"></i>Lunas!
+                    </span>
+                    <span v-else class="qris-subtitle">
+                      <i class="bi bi-hourglass-split me-1 text-warning"></i>
+                      Berlaku: <strong class="text-warning">{{ formatCountdown(qrisSecondsLeft) }}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="qris-qr-wrapper" :class="{ 'qris-settled': qrisStatus === 'settlement' }">
+                  <!-- Real QR image from Midtrans -->
+                  <img
+                    :src="qrisQrUrl"
+                    alt="QR Code Pembayaran QRIS"
+                    class="qris-qr-img"
+                  />
+                  <!-- Settlement overlay -->
+                  <div v-if="qrisStatus === 'settlement'" class="qris-settled-overlay">
+                    <i class="bi bi-check-circle-fill"></i>
+                  </div>
+                  <div class="qris-amount-badge">
+                    {{ formatRupiah(finalTotal) }}
+                  </div>
+                </div>
+
+                <div class="qris-info">
+                  <i class="bi bi-shield-check-fill text-success me-1"></i>
+                  <span class="text-muted small">Scan dengan GoPay, OVO, Dana, LinkAja, m-Banking</span>
+                </div>
+                <div class="qris-store-info mt-2">
+                  <span class="fw-semibold text-light small">{{ getShopName() }}</span>
+                </div>
+              </div>
+
+              <!-- Sandbox Test Helper (always visible when pending) -->
+              <div v-if="qrisStatus === 'pending'" class="qris-sandbox-box">
+                <div class="qris-sandbox-label">
+                  <i class="bi bi-bug-fill me-1 text-warning"></i>
+                  <span>Mode Sandbox — Gunakan simulator untuk test</span>
+                </div>
+                <div class="qris-sandbox-orderid">
+                  <span class="qris-sandbox-orderlabel">Order ID:</span>
+                  <code class="qris-sandbox-code">{{ qrisOrderId }}</code>
+                  <button @click="copyOrderId" class="qris-copy-btn" :title="copiedOrderId ? 'Tersalin!' : 'Salin Order ID'">
+                    <i class="bi" :class="copiedOrderId ? 'bi-check-lg text-success' : 'bi-clipboard'"></i>
+                  </button>
+                </div>
+                <a
+                  href="https://simulator.sandbox.midtrans.com/qris/index"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="qris-simulator-link"
+                >
+                  <i class="bi bi-box-arrow-up-right me-1"></i>
+                  Buka QRIS Simulator Midtrans
+                </a>
+              </div>
+
+              <!-- Polling status indicator -->
+              <div v-if="qrisStatus === 'pending'" class="mt-2 text-muted small d-flex align-items-center justify-content-center gap-1">
+                <span class="spinner-border spinner-border-sm" role="status" style="width: 10px; height: 10px;"></span>
+                <span>Menunggu pembayaran... (otomatis terdeteksi)</span>
+              </div>
+              <div v-if="qrisStatus === 'settlement'" class="mt-2 text-success small fw-semibold d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Pembayaran diterima! Memproses transaksi...</span>
+              </div>
             </div>
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button @click="showCheckoutModal = false" class="btn-cancel">Kembali</button>
-            <button 
-              @click="completePayment" 
-              :disabled="!cashReceived || Number(cashReceived) < finalTotal" 
+            <button
+              @click="showCheckoutModal = false; stopQrisPolling()"
+              class="btn-cancel"
+            >Kembali</button>
+            <!-- Tunai: show confirm button -->
+            <button
+              v-if="paymentMethod === 'Tunai'"
+              @click="completePayment"
+              :disabled="!isPaymentReady"
               class="btn-confirm"
             >
-              Konfirmasi Selesai
+              <i class="bi bi-cash-coin"></i> Konfirmasi Selesai
             </button>
+            <!-- QRIS: show waiting/done indicator instead of manual button -->
+            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'pending'" class="text-muted small ms-auto d-flex align-items-center gap-1">
+              <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span>
+              Menunggu...
+            </span>
+            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'settlement'" class="text-success small ms-auto fw-semibold">
+              <i class="bi bi-check-circle-fill"></i> Memproses...
+            </span>
           </div>
         </div>
       </div>
@@ -691,6 +998,12 @@ watch(searchProductQuery, () => {
                   <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
                   <span v-if="finishedTransaction?.customerPhone" class="text-muted">({{ finishedTransaction?.customerPhone }})</span>
                 </div>
+                <div class="d-flex justify-content-between">
+                  <span>Metode:</span>
+                  <span class="fw-semibold" :class="finishedTransaction?.metode_pembayaran === 'QRIS' ? 'text-primary' : 'text-success'">
+                    {{ finishedTransaction?.metode_pembayaran || 'Tunai' }}
+                  </span>
+                </div>
               </div>
 
               <div class="receipt-divider"></div>
@@ -724,9 +1037,9 @@ watch(searchProductQuery, () => {
                 </div>
                 <div class="d-flex justify-content-between text-muted mt-1">
                   <span>Bayar:</span>
-                  <span>{{ formatRupiah(finishedTransaction?.cashReceived) }}</span>
+                  <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' : formatRupiah(finishedTransaction?.cashReceived) }}</span>
                 </div>
-                <div class="d-flex justify-content-between text-muted">
+                <div v-if="finishedTransaction?.metode_pembayaran !== 'QRIS'" class="d-flex justify-content-between text-muted">
                   <span>Kembali:</span>
                   <span>{{ formatRupiah(finishedTransaction?.cashChange) }}</span>
                 </div>
@@ -776,6 +1089,9 @@ watch(searchProductQuery, () => {
           <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
           <span v-if="finishedTransaction?.customerPhone">({{ finishedTransaction?.customerPhone }})</span>
         </div>
+        <div class="d-flex justify-content-between">
+          <span>Metode: {{ finishedTransaction?.metode_pembayaran || 'Tunai' }}</span>
+        </div>
       </div>
 
       <div class="receipt-divider"></div>
@@ -809,9 +1125,9 @@ watch(searchProductQuery, () => {
         </div>
         <div class="d-flex justify-content-between">
           <span>Bayar:</span>
-          <span>{{ formatRupiah(finishedTransaction?.cashReceived) }}</span>
+          <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' : formatRupiah(finishedTransaction?.cashReceived) }}</span>
         </div>
-        <div class="d-flex justify-content-between">
+        <div v-if="finishedTransaction?.metode_pembayaran !== 'QRIS'" class="d-flex justify-content-between">
           <span>Kembali:</span>
           <span>{{ formatRupiah(finishedTransaction?.cashChange) }}</span>
         </div>
@@ -924,6 +1240,221 @@ watch(searchProductQuery, () => {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Payment method tab toggle */
+.payment-method-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+.payment-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.payment-tab-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background-color: #eef2ff;
+}
+.payment-tab-btn.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* QRIS card styles */
+.qris-section {
+  padding: 4px 0 0;
+}
+.qris-card {
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.3);
+}
+.qris-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 50%;
+}
+.qris-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.qris-badge {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+.qris-subtitle {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+.qris-qr-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  display: inline-block;
+  margin: 0 auto 12px;
+  position: relative;
+}
+.qris-qr-img {
+  width: 168px;
+  height: 168px;
+  display: block;
+}
+.qris-amount-badge {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin: -6px auto 0;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+.qris-info {
+  margin-top: 10px;
+}
+.qris-store-info {
+  color: #cbd5e1;
+}
+/* Retry / action button inside QRIS card */
+.qris-retry-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.qris-retry-btn:hover {
+  opacity: 0.85;
+}
+/* Settlement check overlay on QR */
+.qris-settled {
+  position: relative;
+}
+.qris-settled-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 185, 129, 0.7);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #ffffff;
+}
+/* Status badge for settlement */
+.qris-status-badge.settlement {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* Sandbox test helper panel */
+.qris-sandbox-box {
+  margin-top: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+.qris-sandbox-label {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.qris-sandbox-orderid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: nowrap;
+}
+.qris-sandbox-orderlabel {
+  font-size: 0.72rem;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.qris-sandbox-code {
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+}
+.qris-copy-btn {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  padding: 2px 7px;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.qris-copy-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+.qris-simulator-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+.qris-simulator-link:hover {
+  color: #818cf8;
+  text-decoration: underline;
 }
 </style>
 
