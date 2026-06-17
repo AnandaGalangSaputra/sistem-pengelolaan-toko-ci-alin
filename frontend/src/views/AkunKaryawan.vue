@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { state, updateProfile as updateProfileStore, updatePassword as updatePasswordStore } from '../store/store.js'
+import { state, updateProfile as updateProfileStore, updatePassword as updatePasswordStore, addNotification } from '../store/store.js'
 
 const successToastMsg = ref('')
 
@@ -27,6 +27,7 @@ const updateProfile = async () => {
   try {
     const result = await updateProfileStore(formName.value, formRole.value)
     if (result.success) {
+      addNotification('Profil Diperbarui', 'Informasi akun profil berhasil disimpan.', 'info')
       triggerToast('Informasi profil berhasil diperbarui! Sidebar akan memuat ulang peran baru Anda.')
     } else {
       alert(result.message)
@@ -56,6 +57,7 @@ const changePassword = async () => {
       newPassword.value = ''
       confirmPassword.value = ''
 
+      addNotification('Keamanan Akun', 'Kata sandi berhasil diperbarui secara permanen.', 'warning')
       triggerToast('Kata sandi berhasil diperbarui secara permanen!')
     } else {
       alert(result.message)

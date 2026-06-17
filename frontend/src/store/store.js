@@ -185,7 +185,8 @@ export const state = reactive({
   printerPaired: loadState('toko_alin_printer_paired', false),
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   salesTarget: loadState('toko_alin_sales_target', 3000000),
-  searchQuery: ''
+  searchQuery: '',
+  notifications: loadState('toko_alin_notifications', [])
 })
 
 export const fetchProducts = async () => {
@@ -291,6 +292,7 @@ export const addRack = async (nama_rak, keterangan = '', color = null) => {
     if (response.ok && resData.success) {
       state.racks.push(resData.data)
       state.racks.sort((a, b) => a.nama_rak.localeCompare(b.nama_rak))
+      addNotification('Rak Ditambahkan', `Rak "${nama_rak}" berhasil dibuat.`, 'success')
       return { success: true }
     } else {
       return { success: false, message: resData.message || 'Gagal menambahkan rak.' }
@@ -326,6 +328,7 @@ export const editRack = async (id, nama_rak, keterangan = '', color = null) => {
           p.rack = resData.data.nama_rak
         }
       })
+      addNotification('Rak Diperbarui', `Informasi Rak "${nama_rak}" berhasil diperbarui.`, 'info')
       return { success: true }
     } else {
       return { success: false, message: resData.message || 'Gagal mengubah nama rak.' }
@@ -354,6 +357,7 @@ export const deleteRack = async (id) => {
       if (state.selectedRackId === id) {
         state.selectedRackId = null
       }
+      addNotification('Rak Dihapus', `Rak berhasil dihapus dari sistem.`, 'warning')
       return { success: true }
     } else {
       return { success: false, message: resData.message || 'Gagal menghapus rak.' }
@@ -389,6 +393,10 @@ watch(() => state.salesTarget, (newVal) => {
   localStorage.setItem('toko_alin_sales_target', JSON.stringify(newVal))
 })
 
+watch(() => state.notifications, (newVal) => {
+  localStorage.setItem('toko_alin_notifications', JSON.stringify(newVal))
+}, { deep: true })
+
 // State Mutation helpers (calling Backend REST APIs)
 export const restockProduct = async (productId, amount) => {
   try {
@@ -407,6 +415,8 @@ export const restockProduct = async (productId, amount) => {
       if (idx !== -1) {
         state.products[idx] = mapProductFromBackend(resData.data)
       }
+      const prodName = resData.data ? resData.data.nama_barang : 'Barang'
+      addNotification('Restok Produk', `Stok "${prodName}" ditambah sebanyak ${amount} unit.`, 'success')
       return true
     } else {
       alert(resData.message || 'Gagal merestok produk.')
@@ -435,6 +445,7 @@ export const addProduct = async (name, rack, stock, limit, price, hargaBeli, ima
       const mapped = mapProductFromBackend(resData.data)
       state.products.push(mapped)
       fetchRacks()
+      addNotification('Produk Ditambahkan', `Produk "${name}" berhasil didaftarkan.`, 'success')
       return true
     } else {
       alert(resData.message || 'Gagal menambahkan produk.')
@@ -473,6 +484,7 @@ export const editProduct = async (id, updatedData) => {
         state.products[idx] = mapProductFromBackend(resData.data)
       }
       fetchRacks()
+      addNotification('Produk Diperbarui', `Informasi produk "${updatedData.name}" berhasil diubah.`, 'info')
       return true
     } else {
       alert(resData.message || 'Gagal mengubah produk.')
@@ -501,6 +513,7 @@ export const deleteProduct = async (id) => {
         state.products.splice(idx, 1)
       }
       fetchRacks()
+      addNotification('Produk Dihapus', `Produk berhasil dihapus dari sistem.`, 'warning')
       return true
     } else {
       alert(resData.message || 'Gagal menghapus produk.')
@@ -594,6 +607,29 @@ export const checkWhatsappStatus = async () => {
     console.error('Error checking WhatsApp status:', error)
   }
   return 'DISCONNECTED'
+}
+
+export const addNotification = (title, message, type = 'info') => {
+  const now = new Date()
+  state.notifications.unshift({
+    id: Date.now(),
+    title,
+    message,
+    type, // 'info', 'success', 'warning', 'danger'
+    rawTime: now.toISOString(),
+    read: false
+  })
+  if (state.notifications.length > 25) {
+    state.notifications.pop()
+  }
+}
+
+export const markAllNotificationsAsRead = () => {
+  state.notifications.forEach(n => n.read = true)
+}
+
+export const clearNotifications = () => {
+  state.notifications = []
 }
 
 export const pairWA = (paired, phoneNumber = '') => {

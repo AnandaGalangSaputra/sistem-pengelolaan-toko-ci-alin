@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { state, addBroadcastHistory, pairWA, waTemplates, addCustomer, deleteCustomer, disconnectWA as disconnectWAStore, sendWABroadcast } from '../../store/store.js'
+import { state, addBroadcastHistory, pairWA, waTemplates, addCustomer, deleteCustomer, disconnectWA as disconnectWAStore, sendWABroadcast, addNotification } from '../../store/store.js'
 import PairWaModal from '../modals/PairWaModal.vue'
 
 const props = defineProps({
@@ -190,6 +190,7 @@ const triggerPairing = () => {
 
 const handlePairConfirm = (num) => {
   pairWA(true, num)
+  addNotification('Koneksi WhatsApp', `WhatsApp berhasil ditautkan ke nomor ${num}.`, 'success')
   successToastMsg.value = `Berhasil menautkan nomor WhatsApp ${num}!`
   setTimeout(() => {
     successToastMsg.value = ''
@@ -200,6 +201,7 @@ const disconnectWA = async () => {
   if (confirm('Apakah Anda yakin ingin memutus koneksi WhatsApp?')) {
     const success = await disconnectWAStore()
     if (success) {
+      addNotification('Koneksi WhatsApp', 'Tautan nomor WhatsApp berhasil diputus.', 'warning')
       successToastMsg.value = 'Nomor WhatsApp berhasil diputus!'
       setTimeout(() => {
         successToastMsg.value = ''
@@ -251,6 +253,7 @@ const sendBroadcast = async () => {
   const success = await sendWABroadcast(broadcastMessage.value, targetNumbers, templateLabel, targetLabel)
 
   if (success) {
+    addNotification('WhatsApp Broadcast', `Broadcast "${templateLabel}" dikirim ke ${targetLabel}.`, 'success')
     // Simulate progress bar based on 2 seconds delay per number
     const totalDuration = targetNumbers.length * 2000
     const stepTime = Math.max(totalDuration / 20, 100) // 20 steps, minimum 100ms

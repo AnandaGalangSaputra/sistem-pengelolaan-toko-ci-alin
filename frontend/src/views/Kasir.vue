@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { state, addTransaction } from '../store/store.js'
+import { state, addTransaction, addNotification } from '../store/store.js'
 
 const parseUtcToLocal = (dateStr) => {
   if (!dateStr) return new Date()
@@ -343,6 +343,7 @@ const completePayment = async () => {
 
     const resData = await response.json()
     if (response.ok && resData.success) {
+      addNotification('Transaksi Penjualan', `Transaksi #${resData.data.kode_transaksi} senilai ${formatRupiah(finalTotal.value)} sukses diselesaikan.`, 'success')
       const dateObj = parseUtcToLocal(resData.data.tanggal)
       // Set finished transaction for printing
       finishedTransaction.value = {
