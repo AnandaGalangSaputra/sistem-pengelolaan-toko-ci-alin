@@ -19,13 +19,13 @@ const successToastMsg = ref('')
 // Filter products based on search query and rack filter in cashier panel
 const availableProducts = computed(() => {
   let products = state.products.filter(p => p.stock > 0)
-  
+
   if (state.selectedRackId !== null) {
     products = products.filter(p => p.rak_id === state.selectedRackId)
   }
-  
+
   const q = searchProductQuery.value.toLowerCase()
-  return products.filter(p => 
+  return products.filter(p =>
     p.name.toLowerCase().includes(q) || p.rack.toLowerCase().includes(q)
   )
 })
@@ -494,7 +494,8 @@ watch(searchProductQuery, () => {
   <div class="kasir-wrapper">
     <!-- Success Toast Alert -->
     <transition name="fade">
-      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow" role="alert">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow"
+        role="alert">
         <i class="bi bi-check-circle-fill me-2 fs-5"></i>
         <div>{{ successToastMsg }}</div>
       </div>
@@ -503,7 +504,8 @@ watch(searchProductQuery, () => {
     <!-- Page Title -->
     <div class="content-header mb-4">
       <h1 class="page-title">Kasir Transaksi</h1>
-      <p class="page-subtitle">Pilih produk belanjaan pelanggan, atur diskon potongan harga langsung, dan selesaikan pembayaran.</p>
+      <p class="page-subtitle">Pilih produk belanjaan pelanggan, atur diskon potongan harga langsung, dan selesaikan
+        pembayaran.</p>
     </div>
 
     <div class="row g-4">
@@ -518,18 +520,15 @@ watch(searchProductQuery, () => {
             <!-- Search bar specifically for items in cashier -->
             <div class="position-relative" style="width: 260px;">
               <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted small"></i>
-              <input 
-                type="text" 
-                v-model="searchProductQuery" 
-                class="form-control-style py-1.5 ps-5" 
-                placeholder="Cari nama barang..."
-                style="height: 36px; padding-left: 36px !important;"
-              />
+              <input type="text" v-model="searchProductQuery" class="form-control-style py-1.5 ps-5"
+                placeholder="Cari nama barang..." style="height: 36px; padding-left: 36px !important;" />
             </div>
           </div>
 
           <!-- Active Rack Filter Badge -->
-          <div v-if="state.selectedRackId !== null" class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-2.5 mb-3 rounded-3" style="background-color: #f0f7ff; color: #1e3a8a; font-size: 0.85rem;">
+          <div v-if="state.selectedRackId !== null"
+            class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-2.5 mb-3 rounded-3"
+            style="background-color: #f0f7ff; color: #1e3a8a; font-size: 0.85rem;">
             <div class="d-flex align-items-center gap-2">
               <i class="bi bi-funnel-fill text-primary"></i>
               <div>
@@ -537,7 +536,9 @@ watch(searchProductQuery, () => {
                 <span class="text-muted ms-2">({{ availableProducts.length }} barang tersedia)</span>
               </div>
             </div>
-            <button @click="clearRackFilter" class="btn btn-sm btn-outline-primary-custom rounded-3 py-0.5 px-2 d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+            <button @click="clearRackFilter"
+              class="btn btn-sm btn-outline-primary-custom rounded-3 py-0.5 px-2 d-flex align-items-center gap-1"
+              style="font-size: 0.75rem;">
               <i class="bi bi-x-lg"></i>
               <span>Hapus Filter</span>
             </button>
@@ -549,16 +550,19 @@ watch(searchProductQuery, () => {
                 <tr>
                   <th @click="toggleSort('name')" style="cursor: pointer; user-select: none;">
                     Nama Barang
-                    <i class="bi ms-1" :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                    <i class="bi ms-1"
+                      :class="sortBy.startsWith('name') ? (sortBy === 'name-asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
                   </th>
                   <th>Rak</th>
                   <th @click="toggleSort('price')" style="cursor: pointer; user-select: none;">
                     Harga
-                    <i class="bi ms-1" :class="sortBy.startsWith('price') ? (sortBy === 'price-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                    <i class="bi ms-1"
+                      :class="sortBy.startsWith('price') ? (sortBy === 'price-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
                   </th>
                   <th @click="toggleSort('stock')" style="cursor: pointer; user-select: none;">
                     Stok
-                    <i class="bi ms-1" :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                    <i class="bi ms-1"
+                      :class="sortBy.startsWith('stock') ? (sortBy === 'stock-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
                   </th>
                   <th class="text-center">Aksi</th>
                 </tr>
@@ -571,7 +575,8 @@ watch(searchProductQuery, () => {
                   </td>
                   <td class="fw-semibold">{{ formatRupiah(prod.price) }}</td>
                   <td>
-                    <span class="badge" :class="prod.stock < prod.limit ? 'bg-light-danger text-danger' : 'bg-light-warning text-warning'">
+                    <span class="badge"
+                      :class="prod.stock < prod.limit ? 'bg-light-danger text-danger' : 'bg-light-warning text-warning'">
                       {{ prod.stock }} unit
                     </span>
                   </td>
@@ -591,22 +596,29 @@ watch(searchProductQuery, () => {
           </div>
 
           <!-- Pagination Controls -->
-          <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 pt-2 border-top">
+          <div v-if="totalPages > 1"
+            class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 pt-2 border-top">
             <div class="text-muted small" style="font-size: 0.75rem;">
-              Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, availableProducts.length) }}</strong> dari <strong>{{ availableProducts.length }}</strong>
+              Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage
+                * itemsPerPage, availableProducts.length) }}</strong> dari <strong>{{ availableProducts.length
+                }}</strong>
             </div>
             <nav aria-label="Page navigation">
               <ul class="pagination pagination-sm mb-0">
                 <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                  <button class="page-link rounded-start-3 px-2 py-0.5" @click="currentPage--" :disabled="currentPage === 1" aria-label="Previous">
+                  <button class="page-link rounded-start-3 px-2 py-0.5" @click="currentPage--"
+                    :disabled="currentPage === 1" aria-label="Previous">
                     <i class="bi bi-chevron-left"></i>
                   </button>
                 </li>
-                <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: currentPage === page }">
-                  <button class="page-link px-2.5 py-0.5" style="font-size: 0.75rem;" @click="currentPage = page">{{ page }}</button>
+                <li v-for="page in visiblePages" :key="page" class="page-item"
+                  :class="{ active: currentPage === page }">
+                  <button class="page-link px-2.5 py-0.5" style="font-size: 0.75rem;" @click="currentPage = page">{{
+                    page }}</button>
                 </li>
                 <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                  <button class="page-link rounded-end-3 px-2 py-0.5" @click="currentPage++" :disabled="currentPage === totalPages" aria-label="Next">
+                  <button class="page-link rounded-end-3 px-2 py-0.5" @click="currentPage++"
+                    :disabled="currentPage === totalPages" aria-label="Next">
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </li>
@@ -627,25 +639,32 @@ watch(searchProductQuery, () => {
 
             <!-- Cart Items List -->
             <div class="cart-items-wrapper mb-4" style="max-height: 320px; overflow-y: auto;">
-              <div v-for="item in cart" :key="item.product.id" class="d-flex align-items-center justify-content-between border-bottom py-2.5">
+              <div v-for="item in cart" :key="item.product.id"
+                class="d-flex align-items-center justify-content-between border-bottom py-2.5">
                 <div style="flex: 1; max-width: 60%;">
                   <span class="fw-bold text-dark d-block text-truncate">{{ item.product.name }}</span>
                   <span class="text-muted small">{{ formatRupiah(item.product.price) }}</span>
                 </div>
-                
+
                 <!-- Quantity adjusters -->
                 <div class="d-flex align-items-center gap-2 px-2">
-                  <button @click="decrementQty(item)" class="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                  <button @click="decrementQty(item)"
+                    class="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center"
+                    style="width: 24px; height: 24px;">
                     <i class="bi bi-dash"></i>
                   </button>
-                  <span class="fw-bold text-dark font-monospace small" style="min-width: 20px; text-align: center;">{{ item.quantity }}</span>
-                  <button @click="incrementQty(item)" class="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                  <span class="fw-bold text-dark font-monospace small" style="min-width: 20px; text-align: center;">{{
+                    item.quantity }}</span>
+                  <button @click="incrementQty(item)"
+                    class="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center"
+                    style="width: 24px; height: 24px;">
                     <i class="bi bi-plus"></i>
                   </button>
                 </div>
 
                 <div class="text-end" style="width: 90px;">
-                  <span class="fw-bold text-primary small d-block">{{ formatRupiah(item.product.price * item.quantity) }}</span>
+                  <span class="fw-bold text-primary small d-block">{{ formatRupiah(item.product.price * item.quantity)
+                    }}</span>
                 </div>
 
                 <button @click="removeFromCart(item)" class="btn btn-sm text-danger border-0 p-1 ms-2">
@@ -673,14 +692,8 @@ watch(searchProductQuery, () => {
               </label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0 small" style="font-size: 0.8rem;">Rp</span>
-                <input 
-                  type="number" 
-                  v-model.number="discountInput" 
-                  class="form-control-style border-start-0 py-1.5" 
-                  placeholder="Misal: 5000"
-                  min="0"
-                  :max="subtotal"
-                />
+                <input type="number" v-model.number="discountInput" class="form-control-style border-start-0 py-1.5"
+                  placeholder="Misal: 5000" min="0" :max="subtotal" />
               </div>
             </div>
 
@@ -729,20 +742,12 @@ watch(searchProductQuery, () => {
 
             <!-- Payment Method Toggle -->
             <div class="payment-method-tabs mb-3">
-              <button
-                id="tab-tunai"
-                class="payment-tab-btn"
-                :class="{ active: paymentMethod === 'Tunai' }"
-                @click="paymentMethod = 'Tunai'; stopQrisPolling()"
-              >
+              <button id="tab-tunai" class="payment-tab-btn" :class="{ active: paymentMethod === 'Tunai' }"
+                @click="paymentMethod = 'Tunai'; stopQrisPolling()">
                 <i class="bi bi-cash-coin me-1"></i>Tunai
               </button>
-              <button
-                id="tab-qris"
-                class="payment-tab-btn"
-                :class="{ active: paymentMethod === 'QRIS' }"
-                @click="paymentMethod = 'QRIS'; if (qrisStatus === 'idle') initiateQrisPayment()"
-              >
+              <button id="tab-qris" class="payment-tab-btn" :class="{ active: paymentMethod === 'QRIS' }"
+                @click="paymentMethod = 'QRIS'; if (qrisStatus === 'idle') initiateQrisPayment()">
                 <i class="bi bi-qr-code me-1"></i>QRIS
               </button>
             </div>
@@ -751,23 +756,13 @@ watch(searchProductQuery, () => {
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label for="custName" class="form-label-style">Nama Customer (Opsional)</label>
-                <input 
-                  type="text" 
-                  id="custName" 
-                  v-model="customerName" 
-                  class="form-control-style" 
-                  placeholder="Nama pembeli..."
-                />
+                <input type="text" id="custName" v-model="customerName" class="form-control-style"
+                  placeholder="Nama pembeli..." />
               </div>
               <div class="col-6">
                 <label for="custPhone" class="form-label-style">No. WhatsApp (Opsional)</label>
-                <input 
-                  type="text" 
-                  id="custPhone" 
-                  v-model="customerPhone" 
-                  class="form-control-style" 
-                  placeholder="Contoh: 0812xxx"
-                />
+                <input type="text" id="custPhone" v-model="customerPhone" class="form-control-style"
+                  placeholder="Contoh: 0812xxx" />
               </div>
             </div>
 
@@ -777,20 +772,16 @@ watch(searchProductQuery, () => {
                 <label for="cashReceived" class="form-label-style">Uang Diterima (Rp)</label>
                 <div class="input-group">
                   <span class="input-group-text bg-light border-end-0">Rp</span>
-                  <input 
-                    type="number" 
-                    id="cashReceived" 
-                    v-model.number="cashReceived" 
-                    class="form-control-style border-start-0 py-2 fs-5 fw-bold" 
-                    placeholder="Masukkan jumlah uang..."
-                    required
-                  />
+                  <input type="number" id="cashReceived" v-model.number="cashReceived"
+                    class="form-control-style border-start-0 py-2 fs-5 fw-bold" placeholder="Masukkan jumlah uang..."
+                    required />
                 </div>
               </div>
               <!-- Change display panel -->
               <div class="bg-light border rounded-3 p-3 text-center">
                 <span class="text-muted small d-block mb-1">UANG KEMBALIAN</span>
-                <span class="fs-4 fw-bold" :class="cashChange >= 0 && cashReceived >= finalTotal ? 'text-success' : 'text-muted'">
+                <span class="fs-4 fw-bold"
+                  :class="cashChange >= 0 && cashReceived >= finalTotal ? 'text-success' : 'text-muted'">
                   {{ formatRupiah(cashChange) }}
                 </span>
               </div>
@@ -800,13 +791,15 @@ watch(searchProductQuery, () => {
             <div v-if="paymentMethod === 'QRIS'" class="qris-section text-center">
 
               <!-- Loading State -->
-              <div v-if="qrisStatus === 'loading'" class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
+              <div v-if="qrisStatus === 'loading'"
+                class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
                 <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
                 <span class="text-light small">Membuat QR Code QRIS...</span>
               </div>
 
               <!-- Error State -->
-              <div v-else-if="qrisStatus === 'error'" class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
+              <div v-else-if="qrisStatus === 'error'"
+                class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
                 <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2.5rem;"></i>
                 <span class="text-light small">{{ qrisErrorMsg }}</span>
                 <button @click="initiateQrisPayment" class="qris-retry-btn">
@@ -815,7 +808,8 @@ watch(searchProductQuery, () => {
               </div>
 
               <!-- Expired State -->
-              <div v-else-if="qrisStatus === 'expire'" class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
+              <div v-else-if="qrisStatus === 'expire'"
+                class="qris-card d-flex flex-column align-items-center justify-content-center py-4 gap-3">
                 <i class="bi bi-clock-history text-warning" style="font-size: 2.5rem;"></i>
                 <span class="text-light small">QR Code sudah kedaluwarsa</span>
                 <button @click="initiateQrisPayment" class="qris-retry-btn">
@@ -824,7 +818,8 @@ watch(searchProductQuery, () => {
               </div>
 
               <!-- Idle State (not yet initiated) -->
-              <div v-else-if="qrisStatus === 'idle'" class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
+              <div v-else-if="qrisStatus === 'idle'"
+                class="qris-card d-flex flex-column align-items-center justify-content-center py-5">
                 <button @click="initiateQrisPayment" class="qris-retry-btn">
                   <i class="bi bi-qr-code me-1"></i>Buat QR Code
                 </button>
@@ -847,11 +842,7 @@ watch(searchProductQuery, () => {
 
                 <div class="qris-qr-wrapper" :class="{ 'qris-settled': qrisStatus === 'settlement' }">
                   <!-- Real QR image from Midtrans -->
-                  <img
-                    :src="qrisQrUrl"
-                    alt="QR Code Pembayaran QRIS"
-                    class="qris-qr-img"
-                  />
+                  <img :src="qrisQrUrl" alt="QR Code Pembayaran QRIS" class="qris-qr-img" />
                   <!-- Settlement overlay -->
                   <div v-if="qrisStatus === 'settlement'" class="qris-settled-overlay">
                     <i class="bi bi-check-circle-fill"></i>
@@ -879,27 +870,26 @@ watch(searchProductQuery, () => {
                 <div class="qris-sandbox-orderid">
                   <span class="qris-sandbox-orderlabel">Order ID:</span>
                   <code class="qris-sandbox-code">{{ qrisOrderId }}</code>
-                  <button @click="copyOrderId" class="qris-copy-btn" :title="copiedOrderId ? 'Tersalin!' : 'Salin Order ID'">
+                  <button @click="copyOrderId" class="qris-copy-btn"
+                    :title="copiedOrderId ? 'Tersalin!' : 'Salin Order ID'">
                     <i class="bi" :class="copiedOrderId ? 'bi-check-lg text-success' : 'bi-clipboard'"></i>
                   </button>
                 </div>
-                <a
-                  href="https://simulator.sandbox.midtrans.com/qris/index"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="qris-simulator-link"
-                >
+                <a href="https://simulator.sandbox.midtrans.com/qris/index" target="_blank" rel="noopener noreferrer"
+                  class="qris-simulator-link">
                   <i class="bi bi-box-arrow-up-right me-1"></i>
                   Buka QRIS Simulator Midtrans
                 </a>
               </div>
 
               <!-- Polling status indicator -->
-              <div v-if="qrisStatus === 'pending'" class="mt-2 text-muted small d-flex align-items-center justify-content-center gap-1">
+              <div v-if="qrisStatus === 'pending'"
+                class="mt-2 text-muted small d-flex align-items-center justify-content-center gap-1">
                 <span class="spinner-border spinner-border-sm" role="status" style="width: 10px; height: 10px;"></span>
                 <span>Menunggu pembayaran... (otomatis terdeteksi)</span>
               </div>
-              <div v-if="qrisStatus === 'settlement'" class="mt-2 text-success small fw-semibold d-flex align-items-center justify-content-center gap-1">
+              <div v-if="qrisStatus === 'settlement'"
+                class="mt-2 text-success small fw-semibold d-flex align-items-center justify-content-center gap-1">
                 <i class="bi bi-check-circle-fill"></i>
                 <span>Pembayaran diterima! Memproses transaksi...</span>
               </div>
@@ -907,28 +897,24 @@ watch(searchProductQuery, () => {
           </div>
 
           <div class="modal-footer-custom border-top">
-            <button
-              @click="showCheckoutModal = false; stopQrisPolling()"
-              :disabled="isCompletingPayment"
-              class="btn-cancel"
-            >Kembali</button>
+            <button @click="showCheckoutModal = false; stopQrisPolling()" :disabled="isCompletingPayment"
+              class="btn-cancel">Kembali</button>
             <!-- Tunai: show confirm button -->
-            <button
-              v-if="paymentMethod === 'Tunai'"
-              @click="completePayment"
-              :disabled="!isPaymentReady || isCompletingPayment"
-              class="btn-confirm"
-            >
-              <span v-if="isCompletingPayment" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <button v-if="paymentMethod === 'Tunai'" @click="completePayment"
+              :disabled="!isPaymentReady || isCompletingPayment" class="btn-confirm">
+              <span v-if="isCompletingPayment" class="spinner-border spinner-border-sm me-2" role="status"
+                aria-hidden="true"></span>
               <i v-else class="bi bi-cash-coin me-1"></i>
               {{ isCompletingPayment ? 'Memproses...' : 'Konfirmasi Selesai' }}
             </button>
             <!-- QRIS: show waiting/done indicator instead of manual button -->
-            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'pending'" class="text-muted small ms-auto d-flex align-items-center gap-1">
+            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'pending'"
+              class="text-muted small ms-auto d-flex align-items-center gap-1">
               <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span>
               Menunggu...
             </span>
-            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'settlement'" class="text-success small ms-auto fw-semibold">
+            <span v-if="paymentMethod === 'QRIS' && qrisStatus === 'settlement'"
+              class="text-success small ms-auto fw-semibold">
               <i class="bi bi-check-circle-fill"></i> Memproses...
             </span>
           </div>
@@ -939,16 +925,20 @@ watch(searchProductQuery, () => {
     <!-- Success Transaction Modal -->
     <transition name="modal">
       <div v-if="showSuccessModal" class="modal-backdrop-custom">
-        <div class="modal-card-custom text-center py-5 px-4 animate-fade-in" style="max-width: 380px; border-radius: 16px;">
+        <div class="modal-card-custom text-center py-5 px-4 animate-fade-in"
+          style="max-width: 380px; border-radius: 16px;">
           <div class="mb-4">
-            <div class="success-icon-wrapper mx-auto d-flex align-items-center justify-content-center bg-light-success text-success rounded-circle" style="width: 80px; height: 80px;">
+            <div
+              class="success-icon-wrapper mx-auto d-flex align-items-center justify-content-center bg-light-success text-success rounded-circle"
+              style="width: 80px; height: 80px;">
               <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem; line-height: 1;"></i>
             </div>
           </div>
           <h3 class="fw-bold text-dark mb-2">Pembayaran Berhasil!</h3>
           <p class="text-muted mb-0 small">Transaksi telah dicatat ke sistem secara permanen.</p>
           <div class="mt-4 text-muted small d-flex align-items-center justify-content-center gap-2">
-            <span class="spinner-border spinner-border-sm text-secondary" role="status" style="width: 14px; height: 14px;"></span>
+            <span class="spinner-border spinner-border-sm text-secondary" role="status"
+              style="width: 14px; height: 14px;"></span>
             <span>Mempersiapkan struk belanja...</span>
           </div>
         </div>
@@ -970,23 +960,28 @@ watch(searchProductQuery, () => {
 
           <div class="modal-body-custom pb-3" style="max-height: 60vh; overflow-y: auto; background-color: #f8fafc;">
             <!-- Printer status indicator inside the modal -->
-            <div class="p-3 mb-3 border-bottom bg-white d-flex align-items-center justify-content-between rounded-top-3 text-start">
+            <div
+              class="p-3 mb-3 border-bottom bg-white d-flex align-items-center justify-content-between rounded-top-3 text-start">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-printer-fill" :class="state.printerPaired ? 'text-success' : 'text-secondary'"></i>
                 <div>
                   <div class="fw-bold text-dark" style="font-size: 0.82rem;">Status Printer:</div>
                   <div class="text-muted font-monospace" style="font-size: 0.72rem;">
-                    {{ state.printerPaired ? `${state.printerPairedName} (${getPrinterPaperSize()})` : 'Belum Ditautkan' }}
+                    {{ state.printerPaired ? `${state.printerPairedName} (${getPrinterPaperSize()})` : 'Belum Ditautkan'
+                    }}
                   </div>
                 </div>
               </div>
-              <router-link to="/pengaturan-toko" class="btn btn-xs btn-outline-secondary py-0.5 px-2 text-decoration-none small text-dark border-secondary-subtle" style="font-size: 0.72rem;">
+              <router-link to="/pengaturan"
+                class="btn btn-xs btn-outline-secondary py-0.5 px-2 text-decoration-none small text-dark border-secondary-subtle"
+                style="font-size: 0.72rem;">
                 <i class="bi bi-gear-fill me-1"></i>Atur
               </router-link>
             </div>
 
             <!-- Receipt Paper Preview -->
-            <div class="receipt-paper shadow-sm mx-auto my-2" :class="getPrinterPaperSize() === '80mm' ? 'paper-preview-80' : 'paper-preview-58'">
+            <div class="receipt-paper shadow-sm mx-auto my-2"
+              :class="getPrinterPaperSize() === '80mm' ? 'paper-preview-80' : 'paper-preview-58'">
               <!-- Store Identity -->
               <div class="text-center mb-2">
                 <h4 class="receipt-store-name m-0">{{ getShopName() }}</h4>
@@ -1006,13 +1001,16 @@ watch(searchProductQuery, () => {
                   <span>Tgl: {{ finishedTransaction?.date }}</span>
                   <span>Kasir: {{ finishedTransaction?.cashierName }}</span>
                 </div>
-                <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'" class="d-flex justify-content-between">
+                <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'"
+                  class="d-flex justify-content-between">
                   <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
-                  <span v-if="finishedTransaction?.customerPhone" class="text-muted">({{ finishedTransaction?.customerPhone }})</span>
+                  <span v-if="finishedTransaction?.customerPhone" class="text-muted">({{
+                    finishedTransaction?.customerPhone }})</span>
                 </div>
                 <div class="d-flex justify-content-between">
                   <span>Metode:</span>
-                  <span class="fw-semibold" :class="finishedTransaction?.metode_pembayaran === 'QRIS' ? 'text-primary' : 'text-success'">
+                  <span class="fw-semibold"
+                    :class="finishedTransaction?.metode_pembayaran === 'QRIS' ? 'text-primary' : 'text-success'">
                     {{ finishedTransaction?.metode_pembayaran || 'Tunai' }}
                   </span>
                 </div>
@@ -1049,9 +1047,11 @@ watch(searchProductQuery, () => {
                 </div>
                 <div class="d-flex justify-content-between text-muted mt-1">
                   <span>Bayar:</span>
-                  <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' : formatRupiah(finishedTransaction?.cashReceived) }}</span>
+                  <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' :
+                    formatRupiah(finishedTransaction?.cashReceived) }}</span>
                 </div>
-                <div v-if="finishedTransaction?.metode_pembayaran !== 'QRIS'" class="d-flex justify-content-between text-muted">
+                <div v-if="finishedTransaction?.metode_pembayaran !== 'QRIS'"
+                  class="d-flex justify-content-between text-muted">
                   <span>Kembali:</span>
                   <span>{{ formatRupiah(finishedTransaction?.cashChange) }}</span>
                 </div>
@@ -1077,7 +1077,8 @@ watch(searchProductQuery, () => {
     </transition>
 
     <!-- Hidden Thermal Receipt Area (Only Visible During Printing) -->
-    <div v-if="finishedTransaction" id="thermal-receipt-area" :class="getPrinterPaperSize() === '80mm' ? 'paper-80mm' : 'paper-58mm'">
+    <div v-if="finishedTransaction" id="thermal-receipt-area"
+      :class="getPrinterPaperSize() === '80mm' ? 'paper-80mm' : 'paper-58mm'">
       <!-- Store Identity -->
       <div class="text-center">
         <h4 class="receipt-store-name">{{ getShopName() }}</h4>
@@ -1097,7 +1098,8 @@ watch(searchProductQuery, () => {
           <span>Tgl: {{ finishedTransaction?.date }}</span>
           <span>Kasir: {{ finishedTransaction?.cashierName }}</span>
         </div>
-        <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'" class="d-flex justify-content-between">
+        <div v-if="finishedTransaction?.customerName && finishedTransaction?.customerName !== 'Umum'"
+          class="d-flex justify-content-between">
           <span>Pelanggan: {{ finishedTransaction?.customerName }}</span>
           <span v-if="finishedTransaction?.customerPhone">({{ finishedTransaction?.customerPhone }})</span>
         </div>
@@ -1137,7 +1139,8 @@ watch(searchProductQuery, () => {
         </div>
         <div class="d-flex justify-content-between">
           <span>Bayar:</span>
-          <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' : formatRupiah(finishedTransaction?.cashReceived) }}</span>
+          <span>{{ finishedTransaction?.metode_pembayaran === 'QRIS' ? 'QRIS' :
+            formatRupiah(finishedTransaction?.cashReceived) }}</span>
         </div>
         <div v-if="finishedTransaction?.metode_pembayaran !== 'QRIS'" class="d-flex justify-content-between">
           <span>Kembali:</span>
@@ -1161,13 +1164,16 @@ watch(searchProductQuery, () => {
   overflow-y: auto;
   height: calc(100vh - 70px);
 }
+
 .cart-items-wrapper::-webkit-scrollbar {
   width: 6px;
 }
+
 .cart-items-wrapper::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 3px;
 }
+
 @media (max-width: 991px) {
   .kasir-wrapper {
     height: auto;
@@ -1185,50 +1191,61 @@ watch(searchProductQuery, () => {
   color: #1e293b;
   border-radius: 4px;
 }
+
 .paper-preview-58 {
   width: 280px;
 }
+
 .paper-preview-80 {
   width: 360px;
 }
+
 .receipt-store-name {
   font-size: 1.05rem;
   font-weight: 700;
   color: #0f172a;
 }
+
 .receipt-store-detail {
   font-size: 0.72rem;
   color: #64748b;
   line-height: 1.3;
 }
+
 .receipt-divider {
   border-top: 1px dashed #cbd5e1;
   margin: 12px 0;
   height: 0;
 }
+
 .receipt-meta {
   font-size: 0.75rem;
   color: #475569;
   line-height: 1.4;
 }
+
 .receipt-items {
   font-size: 0.75rem;
   color: #1e293b;
 }
+
 .receipt-item-name {
   white-space: normal;
   word-break: break-word;
 }
+
 .receipt-calc {
   font-size: 0.78rem;
   color: #1e293b;
 }
+
 .receipt-footer {
   font-size: 0.72rem;
   color: #475569;
   font-style: italic;
   line-height: 1.4;
 }
+
 #thermal-receipt-area {
   display: none;
 }
@@ -1237,17 +1254,21 @@ watch(searchProductQuery, () => {
 .bg-light-success {
   background-color: #f0fdf4;
 }
+
 .success-icon-wrapper i {
   animation: pulse-check 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
+
 @keyframes pulse-check {
   0% {
     transform: scale(0);
     opacity: 0;
   }
+
   70% {
     transform: scale(1.15);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -1261,6 +1282,7 @@ watch(searchProductQuery, () => {
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 8px;
 }
+
 .payment-tab-btn {
   flex: 1;
   padding: 8px 12px;
@@ -1273,11 +1295,13 @@ watch(searchProductQuery, () => {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .payment-tab-btn:hover {
   border-color: #6366f1;
   color: #6366f1;
   background-color: #eef2ff;
 }
+
 .payment-tab-btn.active {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #ffffff;
@@ -1289,6 +1313,7 @@ watch(searchProductQuery, () => {
 .qris-section {
   padding: 4px 0 0;
 }
+
 .qris-card {
   background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
   border-radius: 16px;
@@ -1297,6 +1322,7 @@ watch(searchProductQuery, () => {
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.3);
 }
+
 .qris-card::before {
   content: '';
   position: absolute;
@@ -1307,12 +1333,14 @@ watch(searchProductQuery, () => {
   background: rgba(99, 102, 241, 0.15);
   border-radius: 50%;
 }
+
 .qris-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
 .qris-badge {
   background: linear-gradient(135deg, #f59e0b, #ef4444);
   color: #ffffff;
@@ -1322,10 +1350,12 @@ watch(searchProductQuery, () => {
   border-radius: 20px;
   letter-spacing: 1px;
 }
+
 .qris-subtitle {
   color: #94a3b8;
   font-size: 0.78rem;
 }
+
 .qris-qr-wrapper {
   background: #ffffff;
   border-radius: 12px;
@@ -1334,11 +1364,13 @@ watch(searchProductQuery, () => {
   margin: 0 auto 12px;
   position: relative;
 }
+
 .qris-qr-img {
   width: 168px;
   height: 168px;
   display: block;
 }
+
 .qris-amount-badge {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #ffffff;
@@ -1350,12 +1382,15 @@ watch(searchProductQuery, () => {
   display: inline-block;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
 }
+
 .qris-info {
   margin-top: 10px;
 }
+
 .qris-store-info {
   color: #cbd5e1;
 }
+
 /* Retry / action button inside QRIS card */
 .qris-retry-btn {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -1368,13 +1403,16 @@ watch(searchProductQuery, () => {
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
+
 .qris-retry-btn:hover {
   opacity: 0.85;
 }
+
 /* Settlement check overlay on QR */
 .qris-settled {
   position: relative;
 }
+
 .qris-settled-overlay {
   position: absolute;
   inset: 0;
@@ -1386,6 +1424,7 @@ watch(searchProductQuery, () => {
   font-size: 3rem;
   color: #ffffff;
 }
+
 /* Status badge for settlement */
 .qris-status-badge.settlement {
   background: linear-gradient(135deg, #10b981, #059669);
@@ -1407,12 +1446,14 @@ watch(searchProductQuery, () => {
   font-size: 0.78rem;
   color: #94a3b8;
 }
+
 .qris-sandbox-label {
   font-size: 0.75rem;
   color: #f59e0b;
   font-weight: 600;
   margin-bottom: 8px;
 }
+
 .qris-sandbox-orderid {
   display: flex;
   align-items: center;
@@ -1420,12 +1461,14 @@ watch(searchProductQuery, () => {
   margin-bottom: 8px;
   flex-wrap: nowrap;
 }
+
 .qris-sandbox-orderlabel {
   font-size: 0.72rem;
   color: #64748b;
   white-space: nowrap;
   flex-shrink: 0;
 }
+
 .qris-sandbox-code {
   background: rgba(15, 23, 42, 0.6);
   color: #e2e8f0;
@@ -1438,6 +1481,7 @@ watch(searchProductQuery, () => {
   min-width: 0;
   word-break: break-all;
 }
+
 .qris-copy-btn {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -1449,11 +1493,13 @@ watch(searchProductQuery, () => {
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
+
 .qris-copy-btn:hover {
   border-color: #6366f1;
   color: #6366f1;
   background: rgba(99, 102, 241, 0.1);
 }
+
 .qris-simulator-link {
   display: inline-flex;
   align-items: center;
@@ -1464,6 +1510,7 @@ watch(searchProductQuery, () => {
   padding: 4px 0;
   transition: color 0.15s ease;
 }
+
 .qris-simulator-link:hover {
   color: #818cf8;
   text-decoration: underline;
@@ -1486,7 +1533,12 @@ watch(searchProductQuery, () => {
   }
 
   /* Hide app shell */
-  .sidebar, .sidebar-wrapper, aside, .top-header-main, header, .custom-alert {
+  .sidebar,
+  .sidebar-wrapper,
+  aside,
+  .top-header-main,
+  header,
+  .custom-alert {
     display: none !important;
     visibility: hidden !important;
   }
@@ -1498,7 +1550,7 @@ watch(searchProductQuery, () => {
   }
 
   /* Hide everything inside kasir-wrapper except the print area */
-  .kasir-wrapper > *:not(#thermal-receipt-area) {
+  .kasir-wrapper>*:not(#thermal-receipt-area) {
     display: none !important;
     visibility: hidden !important;
   }

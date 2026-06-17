@@ -4,6 +4,9 @@ import { state, pairPrinter } from '../store/store.js'
 
 const successToastMsg = ref('')
 
+// Tab states
+const activeTab = ref('operational')
+
 // Load basic configuration from localStorage
 const loadConfig = (key, defaultVal) => {
   const saved = localStorage.getItem(key)
@@ -104,10 +107,35 @@ const triggerToast = (msg) => {
     <!-- Page Title -->
     <div class="content-header mb-4">
       <h1 class="page-title">Pengaturan Sistem</h1>
-      <p class="page-subtitle">Atur detail operasional toko, cetak struk kasir, jam kerja, dan reset database simulasi.</p>
+      <p class="page-subtitle">Atur detail operasional toko, hubungkan printer, jam kerja, atau pelajari panduan sistem.</p>
     </div>
 
-    <div class="row g-4">
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4 px-1" style="border-bottom: 2px solid #e2e8f0;">
+      <li class="nav-item">
+        <button 
+          class="nav-link fw-bold border-0 px-3 py-2.5" 
+          :class="activeTab === 'operational' ? 'text-primary' : 'text-muted'"
+          :style="activeTab === 'operational' ? 'border-bottom: 3px solid #2563eb !important; color: #2563eb !important; font-weight: 600;' : 'background: transparent; border: none;'"
+          @click="activeTab = 'operational'"
+        >
+          <i class="bi bi-gear-wide-connected me-2"></i>Operasional Toko
+        </button>
+      </li>
+      <li class="nav-item">
+        <button 
+          class="nav-link fw-bold border-0 px-3 py-2.5" 
+          :class="activeTab === 'about' ? 'text-primary' : 'text-muted'"
+          :style="activeTab === 'about' ? 'border-bottom: 3px solid #2563eb !important; color: #2563eb !important; font-weight: 600;' : 'background: transparent; border: none;'"
+          @click="activeTab = 'about'"
+        >
+          <i class="bi bi-info-circle-fill me-2"></i>Tentang & Cara Pakai
+        </button>
+      </li>
+    </ul>
+
+    <!-- Tab 1: Operasional Toko -->
+    <div v-if="activeTab === 'operational'" class="row g-4 animate-fade-in">
       <!-- Left Column: Shop Identity (60%) -->
       <div class="col-12 col-lg-7">
         <div class="card-content-box shadow-sm mb-4">
@@ -225,6 +253,118 @@ const triggerToast = (msg) => {
       </div>
     </div>
 
+    <!-- Tab 2: Tentang & Cara Pakai -->
+    <div v-else-if="activeTab === 'about'" class="card-content-box shadow-sm animate-fade-in">
+      <div class="border-bottom pb-3 mb-4">
+        <h2 class="box-title">Tentang Aplikasi & Panduan</h2>
+        <p class="box-subtitle">Pelajari seluk-beluk fitur sistem pengelolaan toko dan langkah-langkah penggunaannya.</p>
+      </div>
+
+      <div class="row g-4">
+        <!-- Left Sub-column: About App (40%) -->
+        <div class="col-12 col-md-5 border-end border-light">
+          <div class="pe-md-3">
+            <h4 class="fw-bold text-dark mb-3" style="font-size: 1.1rem;">Sistem Pengelolaan Toko Ce Alin</h4>
+            <div class="badge bg-primary-subtle text-primary border-0 rounded-pill px-3 py-1.5 mb-3 fw-bold" style="font-size: 0.75rem;">
+              Versi Stabil v1.2.0
+            </div>
+            <p class="text-secondary small mb-3">
+              Aplikasi ini adalah sistem kasir Point of Sale (POS) modern berbasis Single Page Application (SPA). Dirancang khusus untuk mempermudah operasional toko retail, pelacakan inventaris gudang secara visual, manajemen diskon yang aman, notifikasi aktivitas, WhatsApp gateway otomatis, dan analisis keuangan.
+            </p>
+
+            <h5 class="fw-bold text-dark mt-4 mb-2.5" style="font-size: 0.95rem;">Tech Stack Utama</h5>
+            <ul class="list-unstyled d-flex flex-column gap-2 text-muted small">
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Frontend:</strong>&nbsp;Vue 3 (Composition API / Setup) & Vite
+              </li>
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Backend:</strong>&nbsp;Laravel 11 REST API
+              </li>
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Database:</strong>&nbsp;SQLite Database Engine
+              </li>
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Integrasi WA:</strong>&nbsp;NodeJS + Baileys Library
+              </li>
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Pembayaran:</strong>&nbsp;Simulasi QRIS Midtrans Sandbox
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Right Sub-column: How to Use Accordion (60%) -->
+        <div class="col-12 col-md-7">
+          <div class="ps-md-2">
+            <h4 class="fw-bold text-dark mb-3.5" style="font-size: 1.1rem;">Panduan Operasional Sistem (Cara Pakai)</h4>
+            
+            <div class="d-flex flex-column gap-3">
+              <!-- Item 1 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">1</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Kelola Racks & Barang</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Daftar Rak, Data Barang & Stok Barang</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Daftarkan area rak fisik di menu <strong>Daftar Rak</strong> dengan warna custom. Masuk ke <strong>Data Barang</strong> untuk mendaftarkan barang baru. Untuk barang masuk, gunakan tombol restok di menu <strong>Stok Barang</strong> untuk memperbarui jumlah persediaan.
+                </p>
+              </div>
+
+              <!-- Item 2 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">2</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Transaksi Kasir & QRIS</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Kasir</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Klik item untuk menambahkannya ke keranjang belanja. Pilih pelanggan (vip/reguler) jika terdaftar. Pilih pembayaran <strong>Tunai</strong> atau <strong>QRIS</strong>. QRIS akan memicu kode QR dinamis. Setelah pembayaran selesai, struk belanja akan dicetak secara otomatis.
+                </p>
+              </div>
+
+              <!-- Item 3 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">3</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Broadcasting WhatsApp</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Broadcast WA</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Masuk ke menu <strong>Broadcast WA</strong>. Scan kode QR untuk menghubungkan nomor WhatsApp toko ke Whatsapp Gateway Server. Pilih template pesan (toko buka, promo diskon, atau info restok), pilih nomor tujuan penerima broadcast, lalu klik kirim.
+                </p>
+              </div>
+
+              <!-- Item 4 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">4</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Laporan & Manajemen Pengguna</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Laporan Transaksi & Akun (Khusus Owner)</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Akses <strong>Laporan Transaksi</strong> untuk mencetak PDF bulanan/harian. Di menu <strong>Akun</strong>, owner dapat mengklik tab <strong>Kelola Pengguna</strong> untuk mendaftarkan akun kasir karyawan baru atau mengedit data login.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Printer Pairing Simulation Modal -->
     <transition name="modal">
       <div v-if="showPrinterModal" class="modal-backdrop-custom">
@@ -286,6 +426,25 @@ const triggerToast = (msg) => {
 }
 .bg-light-primary-mini {
   background-color: #f0f6ff;
+}
+.avatar-circle-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+.ms-4.5 {
+  margin-left: 2.25rem !important;
+}
+.bg-primary-subtle {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+}
+.text-primary {
+  color: #2563eb !important;
 }
 @media (max-width: 991px) {
   .pengaturan-wrapper {
