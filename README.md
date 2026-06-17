@@ -1,144 +1,164 @@
 # Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN Berbasis Digital
 
-## Kelompok: Ijazahnya Mana
+Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN merupakan platform **Digital POS (Point of Sale)** dan **Manajemen Inventaris** terintegrasi. Sistem ini dikembangkan untuk mendigitalisasi proses pencatatan stok, visualisasi tata letak rak fisik, transaksi penjualan kasir, hingga pelaporan otomatis guna meningkatkan efisiensi operasional toko.
 
 ---
 
-## Deskripsi Project
+## 🌟 Fitur Utama
 
-Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN Berbasis Digital merupakan sistem yang dirancang untuk membantu proses pengelolaan stok barang, transaksi penjualan, serta operasional toko secara lebih efektif, efisien, dan terintegrasi.
-
-Sistem ini dikembangkan untuk mengurangi ketergantungan operasional toko terhadap owner dengan cara mendigitalisasi proses pencatatan stok, pencarian barang, transaksi kasir, hingga pembuatan laporan penjualan.
-
----
-
-## Tujuan Pengembangan
-
-- Membantu pengelolaan stok barang secara digital
-- Mempermudah pencarian lokasi barang oleh karyawan
-- Mengurangi kesalahan pencatatan manual
-- Mempercepat proses transaksi penjualan
-- Mempermudah monitoring operasional toko
-- Meningkatkan efisiensi pelayanan pelanggan
+- **Autentikasi Multi-Role**:
+  - **Owner**: Kontrol penuh data produk/rak, manajemen target penjualan, laporan keuntungan bersih (profit/loss), serta analisis performa finansial.
+  - **Karyawan**: Akses modul kasir, restok barang, pemantauan tata letak rak, serta melihat riwayat transaksi pribadinya selama shift bekerja (tanpa akses ke HPP/keuntungan bersih toko).
+- **Interactive Floor Plan (Denah Rak)**: Visualisasi rak fisik toko dengan fitur **Drag & Drop** untuk penyesuaian posisi rak secara dinamis, serta skema warna HSL otomatis berdasarkan inisial blok sektor rak.
+- **Manajemen Inventaris & Stok**: Pemantauan stok aktif, visualisasi indikator stok kritis/habis, serta sistem restok barang yang cepat.
+- **Point of Sale (POS) Kasir**:
+  - Keranjang belanja interaktif.
+  - Pengurangan stok barang otomatis setelah checkout.
+  - Penerapan potongan harga/diskon langsung secara fleksibel.
+- **Integrasi Pembayaran QRIS**: Terintegrasi dengan **Midtrans Sandbox API** untuk pembuatan QR Code QRIS secara real-time dan pemantauan status transaksi otomatis.
+- **Cetak Nota Belanja (Thermal Printer)**: Pratinjau struk thermal dengan opsi ukuran kertas **58mm** dan **80mm** (dilengkapi fitur auto-print).
+- **WhatsApp API Gateway**: Sistem gateway pengiriman pesan broadcast pemberitahuan toko/promo ke pelanggan menggunakan WhatsApp (berbasis library Baileys).
 
 ---
 
-## Fitur Utama
-
-- Login dan autentikasi pengguna
-- Manajemen stok barang
-- Pencarian lokasi rak barang
-- Scan barcode barang
-- Transaksi penjualan
-- Pengajuan dan persetujuan diskon
-- Cetak nota transaksi
-- Generate laporan penjualan
-- Update status buka/tutup toko otomatis
-- Integrasi notifikasi WhatsApp & Google Business
-
----
-
-## Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
-- VUe Js
-- Bootstrap / Tailwind
+- **Framework**: Vue.js 3 (SFC)
+- **Build Tool**: Vite
+- **Routing**: Vue Router 4
+- **State Management**: Vue 3 Reactive Store
+- **Styling**: Vanilla CSS (Premium & Modern Theme) + Bootstrap Icons
 
-### Backend
-- Laravel
+### Backend (Laravel API)
+- **Framework**: Laravel 11.x
+- **Database**: SQLite (Ringan dan portabel tanpa instalasi server DB eksternal)
 
-### Database
-- MySQL
-
-### Tools
-- GitHub
-- Figma
-- Visual Studio Code
-- XAMPP
+### WhatsApp Gateway
+- **Runtime**: Node.js
+- **WhatsApp Web API**: `@whiskeysockets/baileys`
+- **HTTP Server**: Express.js & CORS
 
 ---
 
-## Struktur Repository
+## 📂 Struktur Repositori
 
 ```bash
 Sistem-Toko-Ce-Alin/
-├── frontend/
-├── backend/
-├── database/
-├── docs/
-├── ui-design/
-├── README.md
+├── frontend/             # Sumber kode Vue.js 3 (Vite)
+├── backend/              # Sumber kode Laravel 11 & Node.js WA Gateway
+│   ├── app/              # Model, Controller & API Laravel
+│   ├── database/         # Migrasi, Seeder, dan database.sqlite
+│   ├── config/           # Konfigurasi Laravel & Midtrans
+│   └── whatsapp-gateway.cjs  # Layanan Node.js WhatsApp Gateway
+├── docs/                 # Dokumentasi blueprint & diagram proyek
+└── README.md             # File informasi proyek ini
 ```
 
 ---
 
-## Branch Structure
+## 🚀 Panduan Instalasi & Menjalankan Aplikasi
 
-| Branch | Fungsi |
-|---|---|
-| main | Branch utama dan final project |
-| develop | Branch pengembangan sistem |
-| feature/ui-design | Pengembangan desain UI |
-| feature/database | Pengembangan database |
-| feature/backend | Pengembangan backend |
-| feature/documentation | Penyusunan dokumentasi SPB |
+### 📋 Prasyarat
+Pastikan Anda sudah menginstal alat-alat berikut di komputer:
+1.  **PHP >= 8.2** (dengan ekstensi SQLite aktif)
+2.  **Composer** (Manajer dependensi PHP)
+3.  **Node.js >= 18** (dengan NPM)
 
 ---
 
-## Tim Pengembang
+### Langkah 1: Persiapan Backend & Database (Laravel)
 
-| Nama | NIM | Role |
-|---|---|---|
-| Ananda Galang Saputra | 23.11.5734 | Product Owner |
-| Ulfiyatun Solekha | 23.11.5708 | Scrum Master |
-| Naufal Anggara Putra | 23.11.5671 | Developer |
-| Sheva Pajar Assidiqq | 22.11.5058 | Developer |
-| Muhammad Azzam Al-Fikri | 23.11.5653 | Developer |
-| Husein Prabowo | 23.11.5430 | Developer |
-
----
-
-## Workflow Pengembangan
-
-1. Setiap anggota bekerja menggunakan branch masing-masing
-2. Progress disimpan menggunakan commit Git
-3. Feature yang selesai akan di-merge ke branch develop
-4. Setelah stabil, project akan di-merge ke branch main
-
----
-
-## Progress Project
-
-- [x] Requirement Analysis
-- [x] Use Case Diagram
-- [x] Activity Diagram
-- [x] Database Design (ERD)
-- [x] High Fidelity UI Design
-- [ ] Backend Development
-- [ ] Frontend Development
-- [ ] Testing System
-
----
-
-## Repository
-
-GitHub Repository:  
-https://github.com/Ulfytnslkh/Sistem-Toko-Ce-Alin
+1. Masuk ke direktori backend:
+   ```bash
+   cd backend
+   ```
+2. Instal dependensi PHP dan Node.js:
+   ```bash
+   composer install
+   npm install
+   ```
+3. Buat file `.env` dengan menyalin `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+4. Jalankan perintah generate application key:
+   ```bash
+   php artisan key:generate
+   ```
+5. Buat file database SQLite kosong jika belum ada:
+   *   **Windows (PowerShell)**:
+       ```powershell
+       New-Item -ItemType File -Path database/database.sqlite -Force
+       ```
+   *   **macOS / Linux / Git Bash**:
+       ```bash
+       touch database/database.sqlite
+       ```
+6. Jalankan migrasi tabel beserta pengisian data awal (Seeder):
+   ```bash
+   php artisan migrate --seed
+   ```
+7. Jalankan server Laravel lokal:
+   ```bash
+   php artisan serve
+   ```
+   *Server Laravel akan berjalan di http://localhost:8000.*
 
 ---
 
-## Dokumentasi
+### Langkah 2: Menjalankan WhatsApp API Gateway
 
-Dokumentasi project meliputi:
-- Software Project Blueprint (SPB)
-- Use Case Diagram
-- Activity Diagram
-- Entity Relationship Diagram (ERD)
-- High Fidelity UI Design
-- Repository Activity
+Layanan ini dibutuhkan untuk menghubungkan WhatsApp toko dengan fitur kirim broadcast.
+
+1. Tetap berada di folder `backend`, buka terminal baru.
+2. Jalankan script gateway Node.js:
+   ```bash
+   node .\whatsapp-gateway.cjs
+   ```
+   *Layanan Node.js Gateway akan berjalan di port 8082.*
 
 ---
 
-## Lisensi
+### Langkah 3: Persiapan & Menjalankan Frontend (Vue.js 3)
 
-Project ini dibuat untuk kebutuhan akademik dan pembelajaran pada Mata Kuliah Proyek Pemrograman Universitas AMIKOM Yogyakarta.
+1. Buka terminal baru dan masuk ke direktori frontend:
+   ```bash
+   cd frontend
+   ```
+2. Instal dependensi modul Node.js:
+   ```bash
+   npm install
+   ```
+3. Jalankan server development Vite:
+   ```bash
+   npm run dev
+   ```
+   *Frontend akan berjalan di http://localhost:5173 (atau port default lainnya yang ditunjukkan di terminal).*
+
+---
+
+## 🔑 Akun Uji Coba (Credentials)
+
+Gunakan akun berikut untuk menguji perbedaan hak akses pada sistem setelah database di-seed:
+
+| Peran (Role) | Username | Password | Fitur & Akses Utama |
+|---|---|---|---|
+| **Owner (Pemilik)** | `owner` | `owner123` | Akses penuh, melihat keuntungan bersih (profit/loss), mengedit target omset harian. |
+| **Karyawan (Kasir)** | `karyawan` | `admin123` | Melayani checkout kasir, melihat log transaksi pribadi saja, melihat denah rak. |
+
+---
+
+## 💳 Cara Uji Coba Transaksi QRIS (Midtrans Sandbox)
+
+1. Masuk ke halaman **Kasir**, masukkan barang ke keranjang, lalu klik **Bayar Sekarang**.
+2. Pilih metode pembayaran **QRIS** dan klik **Buat QR Code**.
+3. Salin **Order ID** sandbox yang ditampilkan (misalnya: `QRIS-1781680688748-190`).
+4. Buka tautan [Midtrans QRIS Simulator](https://simulator.sandbox.midtrans.com/qris/index).
+5. Tempelkan *Order ID* tersebut ke simulator dan lakukan simulasi bayar (*Pay*).
+6. Halaman Kasir toko Anda akan otomatis mendeteksi transaksi lunas dan mencetak struk thermal belanja!
+
+---
+
+## 📄 Lisensi
+Proyek ini dibuat untuk kebutuhan akademis dan pembelajaran pada Mata Kuliah Proyek Pemrograman Universitas AMIKOM Yogyakarta.
