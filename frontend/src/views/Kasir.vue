@@ -507,6 +507,111 @@ const visiblePages = computed(() => {
 watch(searchProductQuery, () => {
   currentPage.value = 1
 })
+
+// WhatsApp Struk Send States & Logic
+const waNumberInput = ref('')
+const isSendingWa = ref(false)
+
+watch(showReceiptModal, (newVal) => {
+  if (newVal && finishedTransaction.value) {
+    waNumberInput.value = finishedTransaction.value.customerPhone || ''
+  } else {
+    waNumberInput.value = ''
+  }
+})
+
+const cleanWaNumber = (num) => {
+  let cleaned = num.replace(/\D/g, '')
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.substring(1)
+  } else if (cleaned.startsWith('8')) {
+    cleaned = '62' + cleaned
+  }
+  return cleaned
+}
+
+const formatReceiptMessage = (tx) => {
+  const shopName = getShopName()
+  const shopAddress = getShopAddress()
+  const shopWa = getShopWa()
+  const footer = getShopReceiptFooter()
+  
+  let msg = `*${shopName.toUpperCase()}*\n`
+  msg += `${shopAddress}\n`
+  msg += `Telp/WA: ${shopWa}\n`
+  msg += `----------------------------------------\n`
+  msg += `No. Nota: ${tx.kode_transaksi}\n`
+  msg += `Tanggal : ${tx.date} ${tx.time}\n`
+  msg += `Kasir   : ${tx.cashierName}\n`
+  msg += `Pelanggan: ${tx.customerName}\n`
+  msg += `----------------------------------------\n`
+  msg += `*Rincian Belanja:*\n\n`
+  
+  tx.items.forEach(item => {
+    msg += `- ${item.product.name}\n`
+    msg += `  ${item.quantity} x ${formatRupiah(item.product.price)} = ${formatRupiah(item.product.price * item.quantity)}\n\n`
+  })
+  
+  msg += `----------------------------------------\n`
+  msg += `Subtotal: ${formatRupiah(tx.subtotal)}\n`
+  if (tx.discount > 0) {
+    msg += `Diskon  : -${formatRupiah(tx.discount)}\n`
+  }
+  msg += `*TOTAL   : ${formatRupiah(tx.total)}*\n`
+  msg += `Bayar   : ${tx.metode_pembayaran === 'QRIS' ? 'QRIS' : formatRupiah(tx.cashReceived)} (${tx.metode_pembayaran})\n`
+  if (tx.metode_pembayaran !== 'QRIS') {
+    msg += `Kembali : ${formatRupiah(tx.cashChange)}\n`
+  }
+  msg += `----------------------------------------\n`
+  msg += `${footer}`
+  
+  return msg
+}
+
+const sendWaReceipt = async () => {
+  if (!waNumberInput.value) return
+  if (!finishedTransaction.value) return
+
+  const cleanedNum = cleanWaNumber(waNumberInput.value)
+  if (cleanedNum.length < 9) {
+    alert('Format nomor WhatsApp tidak valid!')
+    return
+  }
+
+  isSendingWa.value = true
+  try {
+    const formattedMsg = formatReceiptMessage(finishedTransaction.value)
+    const response = await fetch('http://localhost:8000/api/whatsapp/broadcast', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        message: formattedMsg,
+        numbers: [cleanedNum],
+        template: 'Struk Belanja',
+        target: finishedTransaction.value.customerName || 'Umum'
+      })
+    })
+
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      successToastMsg.value = 'Struk belanja berhasil dikirim via WhatsApp!'
+      setTimeout(() => {
+        successToastMsg.value = ''
+      }, 3000)
+    } else {
+      alert(resData.message || 'Gagal mengirim struk via WhatsApp. Pastikan koneksi gateway WhatsApp terhubung.')
+    }
+  } catch (error) {
+    console.error('Error sending WA receipt:', error)
+    alert('Terjadi kesalahan jaringan saat mengirim struk ke WhatsApp!')
+  } finally {
+    isSendingWa.value = false
+  }
+}
 </script>
 
 <template>
@@ -1083,6 +1188,35 @@ watch(searchProductQuery, () => {
                 {{ getShopReceiptFooter() }}
               </div>
             </div>
+
+            <!-- WhatsApp Send Option -->
+            <div class="bg-white border rounded-3 p-3 mt-3 text-start mx-auto shadow-sm" style="max-width: 380px;">
+              <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-1.5" style="font-size: 0.85rem;">
+                <i class="bi bi-whatsapp text-success fs-5"></i>Kirim Struk via WhatsApp
+              </h5>
+              <p class="text-muted mb-2.5" style="font-size: 0.72rem;">Kirim rincian nota belanja ini langsung ke nomor WhatsApp pelanggan.</p>
+              
+              <div class="d-flex gap-2">
+                <input 
+                  type="text" 
+                  v-model="waNumberInput" 
+                  class="form-control-style py-1.5 px-3" 
+                  placeholder="Contoh: 08123456789" 
+                  style="font-size: 0.8rem; height: 36px;"
+                  :disabled="isSendingWa"
+                />
+                <button 
+                  @click="sendWaReceipt" 
+                  :disabled="isSendingWa || !waNumberInput" 
+                  class="btn btn-sm btn-success d-flex align-items-center justify-content-center gap-1 fw-bold border-0 px-3" 
+                  style="background-color: #25d366; color: white; font-size: 0.8rem; height: 36px; border-radius: 8px;"
+                >
+                  <span v-if="isSendingWa" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>
+                  <span v-else>Kirim</span>
+                </button>
+              </div>
+            </div>
+
           </div>
 
           <div class="modal-footer-custom border-top">
