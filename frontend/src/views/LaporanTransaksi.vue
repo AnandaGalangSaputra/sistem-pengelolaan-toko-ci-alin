@@ -177,6 +177,17 @@ const visiblePages = computed(() => {
 watch(() => state.transactions.length, () => {
   currentPage.value = 1
 })
+
+// Transaction Detail Modal State
+const showDetailModal = ref(false)
+const selectedTx = ref(null)
+
+const openDetailModal = (tx) => {
+  selectedTx.value = tx
+  showDetailModal.value = true
+}
+
+const successToastMsg = ref('')
 </script>
 
 <template>
@@ -383,6 +394,7 @@ watch(() => state.transactions.length, () => {
               </th>
               <th>Metode Bayar</th>
               <th class="text-center">Status</th>
+              <th class="text-center">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -430,9 +442,14 @@ watch(() => state.transactions.length, () => {
                   <i class="bi bi-check-circle-fill me-1"></i>Selesai
                 </span>
               </td>
+              <td class="text-center">
+                <button @click="openDetailModal(tx)" class="btn btn-sm btn-outline-primary rounded-3 border-0 py-1.5 px-2" title="Detail Transaksi">
+                  <i class="bi bi-eye-fill fs-6"></i>
+                </button>
+              </td>
             </tr>
             <tr v-if="transactionsList.length === 0">
-              <td colspan="9" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
+              <td :colspan="isOwner ? 11 : 10" class="text-center py-4 text-muted">Belum ada transaksi terekam di sistem.</td>
             </tr>
           </tbody>
         </table>
@@ -462,6 +479,119 @@ watch(() => state.transactions.length, () => {
         </nav>
       </div>
     </div>
+
+    <!-- Modal: Detail Transaksi -->
+    <transition name="modal">
+      <div v-if="showDetailModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 650px;">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom">
+              <i class="bi bi-receipt text-primary me-2"></i>Detail Transaksi #TX-{{ selectedTx?.id }}
+            </h3>
+            <button @click="showDetailModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom">
+            <!-- Info Summary Section -->
+            <div class="row g-3 mb-4 bg-light p-3 rounded-3 border">
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">Waktu Transaksi</span>
+                <span class="fw-semibold text-dark">{{ selectedTx?.time }} WIB</span>
+              </div>
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">Kode Transaksi</span>
+                <code class="text-primary-emphasis bg-white border px-2 py-0.5 rounded small" style="font-size: 0.8rem;">{{ selectedTx?.kode_transaksi }}</code>
+              </div>
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">Petugas Kasir</span>
+                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1"></i>{{ selectedTx?.cashierName || 'System' }}</span>
+              </div>
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">Nama Pelanggan</span>
+                <span class="fw-semibold text-dark">{{ selectedTx?.customer?.name || 'Umum' }}</span>
+              </div>
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">WhatsApp Pelanggan</span>
+                <span class="fw-semibold text-dark">
+                  <a v-if="selectedTx?.customer?.phone" :href="'https://wa.me/' + selectedTx.customer.phone.replace(/[^0-9]/g, '')" target="_blank" class="text-success text-decoration-none">
+                    <i class="bi bi-whatsapp me-1"></i>{{ selectedTx.customer.phone }}
+                  </a>
+                  <span v-else class="text-muted">-</span>
+                </span>
+              </div>
+              <div class="col-6 col-sm-4">
+                <span class="text-muted small d-block">Metode Pembayaran</span>
+                <span class="badge py-1 px-2 rounded-4 fw-semibold" :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bg-primary bg-opacity-10 text-primary border border-primary' : 'bg-success bg-opacity-10 text-success border border-success'" style="font-size: 0.7rem;">
+                  <i class="bi me-1" :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bi-qr-code' : 'bi-cash-coin'"></i>
+                  {{ selectedTx?.metode_pembayaran || 'Tunai' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Items list -->
+            <div class="mb-4">
+              <h4 class="fw-bold text-dark mb-2" style="font-size: 0.95rem;">Daftar Item Belanja</h4>
+              <div class="table-responsive border rounded-3">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                  <thead>
+                    <tr class="table-light text-secondary">
+                      <th class="py-2" style="width: 50px;">#</th>
+                      <th class="py-2">Nama Produk</th>
+                      <th class="py-2 text-center" style="width: 80px;">Qty</th>
+                      <th class="py-2 text-end" style="width: 120px;">Harga Satuan</th>
+                      <th v-if="isOwner" class="py-2 text-end" style="width: 120px;">Keuntungan</th>
+                      <th class="py-2 text-end" style="width: 120px;">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(detail, idx) in selectedTx?.details" :key="detail.id" class="border-bottom border-light">
+                      <td class="text-muted fw-bold">{{ idx + 1 }}</td>
+                      <td>
+                        <div class="fw-semibold text-dark">{{ detail.barang?.name || 'Produk Tidak Dikenal / Dihapus' }}</div>
+                        <div v-if="detail.barang?.kode_barang" class="text-muted small" style="font-size: 0.75rem;">{{ detail.barang.kode_barang }}</div>
+                      </td>
+                      <td class="text-center fw-bold text-dark">{{ detail.qty }}</td>
+                      <td class="text-end text-dark">{{ formatRupiah(detail.harga) }}</td>
+                      <td v-if="isOwner" class="text-end text-success fw-semibold">
+                        {{ formatRupiah(detail.subtotal - (detail.barang ? detail.barang.harga_beli * detail.qty : 0)) }}
+                      </td>
+                      <td class="text-end fw-bold text-dark">{{ formatRupiah(detail.subtotal) }}</td>
+                    </tr>
+                    <tr v-if="!selectedTx?.details || selectedTx.details.length === 0">
+                      <td colspan="6" class="text-center py-3 text-muted">Tidak ada detail item belanja.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Totals box -->
+            <div class="row justify-content-end">
+              <div class="col-12 col-sm-6">
+                <div class="d-flex justify-content-between py-1 border-bottom border-dashed" style="border-bottom-style: dashed !important;">
+                  <span class="text-muted">Total Harga (Kotor):</span>
+                  <span class="fw-semibold text-dark">{{ formatRupiah(Number(selectedTx?.total) + Number(selectedTx?.discount)) }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-dashed text-danger" style="border-bottom-style: dashed !important;">
+                  <span>Potongan Diskon:</span>
+                  <span class="fw-semibold">{{ selectedTx?.discount > 0 ? '-' + formatRupiah(selectedTx.discount) : '-' }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 fw-bold text-dark fs-5">
+                  <span>Total Pembayaran:</span>
+                  <span class="text-success">{{ formatRupiah(selectedTx?.total) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showDetailModal = false" class="btn-cancel">Tutup</button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- Print Report Preview Modal -->
     <transition name="modal">
