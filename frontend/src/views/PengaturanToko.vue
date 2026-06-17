@@ -7,6 +7,14 @@ const successToastMsg = ref('')
 // Tab states
 const activeTab = ref('operational')
 
+// Database tools loading states
+const isBackingUp = ref(false)
+const isRestoring = ref(false)
+const isResetting = ref(false)
+const fileInput = ref(null)
+const showResetModal = ref(false)
+const resetMode = ref('seeded')
+
 // Load basic configuration from localStorage
 const loadConfig = (key, defaultVal) => {
   const saved = localStorage.getItem(key)
@@ -35,13 +43,116 @@ const saveConfig = () => {
   triggerToast('Pengaturan operasional toko berhasil disimpan!')
 }
 
-const resetSimulationData = () => {
-  if (confirm('Apakah Anda yakin ingin mereset seluruh data simulasi? Seluruh produk, transaksi, diskon, dan status pairing WA akan dikembalikan ke setelan awal pabrik.')) {
-    localStorage.clear()
-    triggerToast('Seluruh data berhasil direset! Memuat ulang halaman...')
-    setTimeout(() => {
-      window.location.reload()
-    }, 1500)
+// Backup database file via fetch download
+const backupDatabase = async () => {
+  isBackingUp.value = true
+  try {
+    const response = await fetch('http://localhost:8000/api/database/backup', {
+      credentials: 'include'
+    })
+    if (!response.ok) {
+      throw new Error('Gagal mengunduh backup database.')
+    }
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[-T:]/g, '_')
+    a.download = `backup_toko_alin_${timestamp}.sqlite`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
+    triggerToast('Database berhasil dicadangkan!')
+  } catch (error) {
+    console.error('Backup error:', error)
+    alert('Gagal mengunduh backup database! Pastikan Anda masuk sebagai Owner.')
+  } finally {
+    isBackingUp.value = false
+  }
+}
+
+// Trigger hidden file picker
+const triggerRestoreFile = () => {
+  fileInput.value.click()
+}
+
+// Restore database from uploaded sqlite file
+const handleDatabaseRestore = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const confirmMsg = 'Apakah Anda yakin ingin memulihkan database? Seluruh data produk, rak, transaksi, dan customer saat ini akan ditimpa secara permanen oleh data dari file backup.'
+  if (!confirm(confirmMsg)) {
+    event.target.value = ''
+    return
+  }
+
+  isRestoring.value = true
+  const formData = new FormData()
+  formData.append('database', file)
+
+  try {
+    const response = await fetch('http://localhost:8000/api/database/restore', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      triggerToast(resData.message)
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } else {
+      alert(resData.message || 'Gagal memulihkan database!')
+    }
+  } catch (error) {
+    console.error('Restore error:', error)
+    alert('Terjadi kesalahan jaringan saat memulihkan database!')
+  } finally {
+    isRestoring.value = false
+    event.target.value = ''
+  }
+}
+
+// Reset/Delete SQLite database (opens confirmation modal)
+const resetDatabase = () => {
+  showResetModal.value = true
+}
+
+// Confirm and execute reset database
+const confirmDatabaseReset = async () => {
+  isResetting.value = true
+  try {
+    const isClean = resetMode.value === 'clean'
+    const response = await fetch('http://localhost:8000/api/database/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        clean: isClean
+      })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      triggerToast(resData.message)
+      showResetModal.value = false
+      localStorage.clear() // clear local cached store states
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } else {
+      alert(resData.message || 'Gagal mereset database!')
+    }
+  } catch (error) {
+    console.error('Reset error:', error)
+    alert('Terjadi kesalahan jaringan saat mereset database!')
+  } finally {
+    isResetting.value = false
   }
 }
 
@@ -236,18 +347,45 @@ const triggerToast = (msg) => {
             </div>
           </div>
 
-          <!-- Simulation database tools (Only Owner can reset database) -->
-          <div v-if="state.currentUser.role.toLowerCase() === 'owner'" class="card-content-box shadow-sm border border-danger border-opacity-25" style="background-color: #fff8f8;">
-            <div class="box-header mb-3">
-              <h2 class="box-title text-danger">Pusat Bahaya / Reset Sistem</h2>
-              <p class="box-subtitle">Aksi pembersihan cache penyimpanan lokal browser Anda.</p>
+          <!-- Manajemen Database (Only Owner can manage) -->
+          <div v-if="state.currentUser.role.toLowerCase() === 'owner'" class="card-content-box shadow-sm">
+            <div class="box-header border-bottom pb-2 mb-4">
+              <h2 class="box-title text-dark">Manajemen Database</h2>
+              <p class="box-subtitle">Cadangkan, pulihkan, atau reset total database sistem kasir Anda.</p>
             </div>
             
-            <p class="text-muted small mb-4">Mereset data akan menghapus seluruh data barang kustom yang Anda tambahkan, riwayat diskon, transaksi hari ini, dan mengembalikannya ke pengaturan demonstrasi awal.</p>
-            
-            <button @click="resetSimulationData" class="btn btn-danger w-100 py-2.5 fw-semibold border-0" style="background-color: #ef4444;">
-              <i class="bi bi-trash3-fill me-2"></i>Reset Seluruh Data
-            </button>
+            <div class="d-flex flex-column gap-3">
+              <!-- Backup -->
+              <div>
+                <span class="text-muted small d-block mb-1.5">Cadangkan semua data (barang, rak, transaksi, pelanggan) ke file backup.</span>
+                <button @click="backupDatabase" :disabled="isBackingUp || isRestoring || isResetting" class="btn btn-sm btn-primary-custom w-100 py-2">
+                  <span v-if="isBackingUp" class="spinner-border spinner-border-sm me-1.5" role="status"></span>
+                  <i v-else class="bi bi-download me-1.5"></i>
+                  {{ isBackingUp ? 'Mencadangkan...' : 'Cadangkan Database (.sqlite)' }}
+                </button>
+              </div>
+
+              <!-- Restore -->
+              <div>
+                <span class="text-muted small d-block mb-1.5">Pulihkan seluruh data dari file backup yang telah tersimpan sebelumnya.</span>
+                <input type="file" ref="fileInput" @change="handleDatabaseRestore" accept=".sqlite,.db" style="display: none;" />
+                <button @click="triggerRestoreFile" :disabled="isBackingUp || isRestoring || isResetting" class="btn btn-sm btn-outline-primary-custom w-100 py-2">
+                  <span v-if="isRestoring" class="spinner-border spinner-border-sm me-1.5" role="status"></span>
+                  <i v-else class="bi bi-upload me-1.5"></i>
+                  {{ isRestoring ? 'Memulihkan...' : 'Pulihkan Database (Restore)' }}
+                </button>
+              </div>
+
+              <!-- Reset / Delete -->
+              <div class="border-top pt-3 border-danger border-opacity-10">
+                <span class="text-danger small d-block mb-1.5 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Zona Bahaya: Menghapus seluruh transaksi, rak, dan barang kustom ke kondisi pabrik.</span>
+                <button @click="resetDatabase" :disabled="isBackingUp || isRestoring || isResetting" class="btn btn-sm btn-danger w-100 py-2.5 fw-semibold border-0" style="background-color: #ef4444;">
+                  <span v-if="isResetting" class="spinner-border spinner-border-sm me-1.5" role="status"></span>
+                  <i v-else class="bi bi-trash3-fill me-1.5"></i>
+                  {{ isResetting ? 'Mereset Database...' : 'Hapus & Reset Database' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -415,6 +553,78 @@ const triggerToast = (msg) => {
         </div>
       </div>
     </transition>
+
+    <!-- Reset Database Confirmation Modal -->
+    <transition name="modal">
+      <div v-if="showResetModal" class="modal-backdrop-custom">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 500px;">
+          <div class="modal-header-custom border-bottom">
+            <h3 class="modal-title-custom text-danger">
+              <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Reset Database
+            </h3>
+            <button @click="showResetModal = false" class="btn-close-custom">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <div class="modal-body-custom py-4">
+            <p class="text-dark small mb-3">
+              Silakan pilih metode reset database yang Anda inginkan. Seluruh data transaksi, pelanggan, dan riwayat broadcast akan dihapus secara permanen.
+            </p>
+            
+            <div class="d-flex flex-column gap-3">
+              <!-- Option A: Seeded -->
+              <div 
+                @click="resetMode = 'seeded'" 
+                class="d-flex align-items-start gap-3 p-3 border rounded-3 text-start style-clickable-item"
+                :class="resetMode === 'seeded' ? 'border-primary bg-light-primary-mini' : 'bg-white'"
+                style="cursor: pointer;"
+              >
+                <i class="bi bi-database-fill-gear fs-4 mt-1" :class="resetMode === 'seeded' ? 'text-primary' : 'text-muted'"></i>
+                <div class="flex-1">
+                  <h6 class="small fw-bold text-dark mb-1">Reset & Pakai Data Contoh (Direkomendasikan)</h6>
+                  <p class="text-muted mb-0" style="font-size: 0.75rem;">
+                    Mengisi database dengan data produk bawaan dan rak contoh. Anda harus mendaftarkan akun Owner baru saat masuk.
+                  </p>
+                </div>
+                <i v-if="resetMode === 'seeded'" class="bi bi-check-circle-fill text-primary align-self-center"></i>
+              </div>
+
+              <!-- Option B: Clean -->
+              <div 
+                @click="resetMode = 'clean'" 
+                class="d-flex align-items-start gap-3 p-3 border rounded-3 text-start style-clickable-item"
+                :class="resetMode === 'clean' ? 'border-danger bg-light-danger-mini' : 'bg-white'"
+                style="cursor: pointer;"
+              >
+                <i class="bi bi-database-fill-x fs-4 mt-1" :class="resetMode === 'clean' ? 'text-danger' : 'text-muted'"></i>
+                <div class="flex-1">
+                  <h6 class="small fw-bold text-dark mb-1">Kosongkan Semua (Mulai dari Nol)</h6>
+                  <p class="text-muted mb-0" style="font-size: 0.75rem;">
+                    Menghapus seluruh isi database (tanpa data contoh). Anda memulai toko dari nol dan mendaftarkan akun Owner baru.
+                  </p>
+                </div>
+                <i v-if="resetMode === 'clean'" class="bi bi-check-circle-fill text-danger align-self-center"></i>
+              </div>
+            </div>
+
+            <!-- Warning Alert inside modal -->
+            <div class="alert alert-warning py-2 px-3 mt-3 rounded-3 small" role="alert" style="font-size: 0.75rem; border: none; background-color: #fffbeb; color: #b45309;">
+              <i class="bi bi-exclamation-circle-fill me-2"></i>
+              Tindakan ini tidak dapat dibatalkan. Pastikan Anda telah mengunduh backup database jika diperlukan.
+            </div>
+          </div>
+
+          <div class="modal-footer-custom border-top">
+            <button @click="showResetModal = false" class="btn-cancel">Batal</button>
+            <button @click="confirmDatabaseReset" :disabled="isResetting" class="btn-confirm bg-danger border-0">
+              <span v-if="isResetting" class="spinner-border spinner-border-sm me-1.5" role="status"></span>
+              {{ isResetting ? 'Mereset...' : 'Ya, Reset Database' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -426,6 +636,9 @@ const triggerToast = (msg) => {
 }
 .bg-light-primary-mini {
   background-color: #f0f6ff;
+}
+.bg-light-danger-mini {
+  background-color: #fff5f5;
 }
 .avatar-circle-sm {
   width: 28px;

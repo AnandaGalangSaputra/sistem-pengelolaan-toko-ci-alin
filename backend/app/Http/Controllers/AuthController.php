@@ -187,4 +187,86 @@ class AuthController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Check if the database users table is empty.
+     */
+    public function checkEmptyDb()
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('users')) {
+                return response()->json([
+                    'success' => true,
+                    'empty' => true
+                ]);
+            }
+            $count = \App\Models\User::count();
+            return response()->json([
+                'success' => true,
+                'empty' => $count === 0
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'empty' => true,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Register the first owner account.
+     */
+    public function registerFirstOwner(Request $request)
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('users')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menjalankan migrasi database: ' . $e->getMessage()
+            ], 500);
+        }
+
+        try {
+            $count = \App\Models\User::count();
+            if ($count > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registrasi dinonaktifkan karena database sudah memiliki pengguna!'
+                ], 403);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memeriksa status database: ' . $e->getMessage()
+            ], 500);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users,username',
+            'password' => 'required|string|min:4'
+        ]);
+
+        $user = \App\Models\User::create([
+            'name' => trim($request->name),
+            'username' => trim($request->username),
+            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+            'role' => 'owner'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Akun Owner pertama berhasil didaftarkan!',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'role' => $user->role,
+            ]
+        ]);
+    }
 }

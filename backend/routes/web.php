@@ -23,11 +23,17 @@ Route::post('/api/logout', [AuthController::class, 'apiLogout']);
 Route::get('/api/me', [AuthController::class, 'apiMe']);
 Route::post('/api/change-password', [AuthController::class, 'apiUpdatePassword']);
 Route::post('/api/update-profile', [AuthController::class, 'apiUpdateProfile']);
+Route::get('/api/check-empty-db', [AuthController::class, 'checkEmptyDb']);
+Route::post('/api/register-first-owner', [AuthController::class, 'registerFirstOwner']);
 
 Route::get('/api/users', [App\Http\Controllers\UserController::class, 'index']);
 Route::post('/api/users', [App\Http\Controllers\UserController::class, 'store']);
 Route::put('/api/users/{id}', [App\Http\Controllers\UserController::class, 'update']);
 Route::delete('/api/users/{id}', [App\Http\Controllers\UserController::class, 'destroy']);
+
+Route::get('/api/database/backup', [App\Http\Controllers\DatabaseController::class, 'backup']);
+Route::post('/api/database/restore', [App\Http\Controllers\DatabaseController::class, 'restore']);
+Route::post('/api/database/reset', [App\Http\Controllers\DatabaseController::class, 'reset']);
 
 Route::get('/api/barangs', [App\Http\Controllers\BarangController::class, 'index']);
 Route::get('/api/raks', [App\Http\Controllers\BarangController::class, 'raks']);
