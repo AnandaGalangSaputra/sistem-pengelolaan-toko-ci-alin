@@ -33,19 +33,15 @@ const lowStockCount = computed(() => {
 })
 
 const sidebarMenu = computed(() => {
-  const role = state.currentUser?.role?.toLowerCase()
   const menus = [
     { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-1x2-fill', active: route.name === 'DashboardKaryawan' },
     { id: 'data-barang', label: 'Data Barang', icon: 'bi-box-seam', active: route.name === 'DataBarang' },
     { id: 'stok-barang', label: 'Stok Barang', icon: 'bi-journal-bookmark', active: route.name === 'StokBarang' },
     { id: 'daftar-rak', label: 'Daftar Rak', icon: 'bi-grid-3x3', active: route.name === 'DaftarRak' },
     { id: 'kasir', label: 'Kasir', icon: 'bi-calculator', active: route.name === 'Kasir' },
-    { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' }
+    { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' },
+    { id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' }
   ]
-
-  if (role === 'owner') {
-    menus.push({ id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' })
-  }
 
   menus.push({ id: 'pengaturan', label: 'Pengaturan', icon: 'bi-gear', active: route.name === 'PengaturanToko' })
   menus.push({ id: 'akun', label: 'Akun', icon: 'bi-person-circle', active: route.name === 'AkunKaryawan' })

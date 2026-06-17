@@ -7,22 +7,30 @@ const formatRupiah = (val) => {
 }
 
 // Compute statistics from store transactions
-const transactionsList = computed(() => state.transactions)
+const isOwner = computed(() => state.currentUser?.role?.toLowerCase() === 'owner')
+
+// Compute transactions filtered by role: Owner sees all, Karyawan only sees their own transactions
+const transactionsList = computed(() => {
+  if (isOwner.value) {
+    return state.transactions
+  }
+  return state.transactions.filter(tx => tx.cashierName === state.currentUser?.name)
+})
 
 const totalRevenue = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.total, 0)
+  return transactionsList.value.reduce((acc, tx) => acc + tx.total, 0)
 })
 
 const totalDiscounts = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.discount, 0)
+  return transactionsList.value.reduce((acc, tx) => acc + tx.discount, 0)
 })
 
 const totalTransactionsCount = computed(() => {
-  return state.transactions.length
+  return transactionsList.value.length
 })
 
 const totalItemsSold = computed(() => {
-  return state.transactions.reduce((acc, tx) => acc + tx.itemsCount, 0)
+  return transactionsList.value.reduce((acc, tx) => acc + tx.itemsCount, 0)
 })
 
 const avgTransactionValue = computed(() => {
@@ -32,7 +40,7 @@ const avgTransactionValue = computed(() => {
 
 // Calculate total cost of goods sold (HPP)
 const totalCogs = computed(() => {
-  return state.transactions.reduce((acc, tx) => {
+  return transactionsList.value.reduce((acc, tx) => {
     const txCogs = tx.details ? tx.details.reduce((sum, d) => sum + (d.barang ? d.barang.harga_beli * d.qty : 0), 0) : 0
     return acc + txCogs
   }, 0)
@@ -219,7 +227,7 @@ watch(() => state.transactions.length, () => {
       </div>
 
       <!-- Card 2: Total HPP -->
-      <div class="col-12 col-md-6 col-lg-4 col-xl">
+      <div v-if="isOwner" class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
             <div class="card-icon-container text-secondary" style="background-color: #f1f5f9; color: #475569;">
@@ -237,7 +245,7 @@ watch(() => state.transactions.length, () => {
       </div>
 
       <!-- Card 3: Keuntungan / Kerugian Bersih -->
-      <div class="col-12 col-md-6 col-lg-4 col-xl">
+      <div v-if="isOwner" class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
             <div class="card-icon-container" :class="netProfit >= 0 ? 'icon-success' : 'icon-warning'" :style="netProfit >= 0 ? '' : 'background-color: #fef2f2; color: #dc2626;'">
@@ -368,7 +376,7 @@ watch(() => state.transactions.length, () => {
               <th>Nama Pembeli</th>
               <th>Jumlah Item</th>
               <th>Potongan Diskon</th>
-              <th>Keuntungan / Kerugian</th>
+              <th v-if="isOwner">Keuntungan / Kerugian</th>
               <th @click="toggleSort('total')" style="cursor: pointer; user-select: none;">
                 Total Pembayaran
                 <i class="bi ms-1" :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
@@ -394,7 +402,7 @@ watch(() => state.transactions.length, () => {
               </td>
               <td>{{ tx.itemsCount }} unit barang</td>
               <td class="text-danger fw-semibold">{{ tx.discount > 0 ? formatRupiah(tx.discount) : '-' }}</td>
-              <td>
+              <td v-if="isOwner">
                 <span v-if="tx.total - getTransactionCogs(tx) >= 0" class="text-success fw-semibold small">
                   <i class="bi bi-arrow-up-right-circle-fill me-1 text-success"></i>
                   {{ formatRupiah(tx.total - getTransactionCogs(tx)) }}
@@ -496,17 +504,17 @@ watch(() => state.transactions.length, () => {
                   <div class="small text-muted mb-0.5">Total Omset Pendapatan</div>
                   <div class="fw-bold" style="font-size: 1.15rem; color: #16a34a;">{{ formatRupiah(totalRevenue) }}</div>
                 </div>
-                <div class="col-6">
+                <div v-if="isOwner" class="col-6">
                   <div class="small text-muted mb-0.5">Total HPP (Harga Pokok)</div>
                   <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ formatRupiah(totalCogs) }}</div>
                 </div>
-                <div class="col-6 mt-3">
+                <div v-if="isOwner" class="col-6 mt-3">
                   <div class="small text-muted mb-0.5">Keuntungan / Kerugian Bersih</div>
                   <div class="fw-bold" :style="{ fontSize: '1.15rem', color: netProfit >= 0 ? '#16a34a' : '#dc2626' }">
                     {{ netProfit >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{ formatRupiah(Math.abs(netProfit)) }}
                   </div>
                 </div>
-                <div class="col-6 mt-3">
+                <div class="col-6" :class="{ 'mt-3': isOwner }">
                   <div class="small text-muted mb-0.5">Total Transaksi Selesai</div>
                   <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ totalTransactionsCount }} Transaksi</div>
                 </div>
@@ -523,7 +531,7 @@ watch(() => state.transactions.length, () => {
                       <th class="py-2 text-start px-2" style="width: 80px;">Petugas</th>
                       <th class="py-2 text-start px-2">Pelanggan</th>
                       <th class="py-2 text-center px-2" style="width: 50px;">Item</th>
-                      <th class="py-2 text-end px-2" style="width: 85px;">Untung/Rugi</th>
+                      <th v-if="isOwner" class="py-2 text-end px-2" style="width: 85px;">Untung/Rugi</th>
                       <th class="py-2 text-end px-2" style="width: 95px;">Total Bayar</th>
                     </tr>
                   </thead>
@@ -534,7 +542,7 @@ watch(() => state.transactions.length, () => {
                       <td class="py-2 px-2 text-dark">{{ tx.cashierName || 'System' }}</td>
                       <td class="py-2 px-2 text-dark">{{ tx.customer?.name || 'Umum' }}</td>
                       <td class="py-2 px-2 text-center">{{ tx.itemsCount }} unit</td>
-                      <td class="py-2 px-2 text-end" :style="{ color: tx.total - getTransactionCogs(tx) >= 0 ? '#16a34a' : '#dc2626', fontWeight: '500' }">
+                      <td v-if="isOwner" class="py-2 px-2 text-end" :style="{ color: tx.total - getTransactionCogs(tx) >= 0 ? '#16a34a' : '#dc2626', fontWeight: '500' }">
                         {{ formatRupiah(tx.total - getTransactionCogs(tx)) }}
                       </td>
                       <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(tx.total) }}</td>
