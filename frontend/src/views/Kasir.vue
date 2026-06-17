@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { state, addTransaction, addNotification } from '../store/store.js'
+import { state, addTransaction, addNotification, fetchTransactions, fetchProducts } from '../store/store.js'
 
 const parseUtcToLocal = (dateStr) => {
   if (!dateStr) return new Date()
@@ -155,7 +155,7 @@ const generateQrisOrderId = () => {
 // Stop polling and countdown
 const stopQrisPolling = () => {
   if (qrisPollInterval.value) {
-    clearInterval(qrisPollInterval.value)
+    clearTimeout(qrisPollInterval.value)
     qrisPollInterval.value = null
   }
   if (qrisCountdownInterval.value) {
@@ -168,15 +168,27 @@ onUnmounted(() => {
   stopQrisPolling()
 })
 
-// Start polling Midtrans status every 3s
+// Start polling Midtrans status with sequential setTimeout to avoid race conditions
 const startQrisPolling = (orderId) => {
   stopQrisPolling()
-  qrisPollInterval.value = setInterval(async () => {
+  
+  const poll = async () => {
+    // Check if we are still waiting for this QRIS payment
+    if (paymentMethod.value !== 'QRIS' || qrisOrderId.value !== orderId || qrisStatus.value !== 'pending') {
+      return
+    }
+
     try {
       const res = await fetch(`http://localhost:8000/api/qris/status/${orderId}`, {
         credentials: 'include'
       })
       const data = await res.json()
+      
+      // Double check state after request returns to ensure it hasn't changed
+      if (paymentMethod.value !== 'QRIS' || qrisOrderId.value !== orderId || qrisStatus.value !== 'pending') {
+        return
+      }
+
       if (data.success) {
         const txStatus = data.transaction_status
         if (txStatus === 'settlement' || txStatus === 'capture') {
@@ -184,15 +196,25 @@ const startQrisPolling = (orderId) => {
           stopQrisPolling()
           // Auto-complete the transaction
           await completePayment()
+          return
         } else if (txStatus === 'expire' || txStatus === 'cancel' || txStatus === 'deny') {
           qrisStatus.value = 'expire'
           stopQrisPolling()
+          return
         }
       }
     } catch (e) {
       console.warn('QRIS polling error:', e)
     }
-  }, 3000)
+
+    // Schedule next poll only if still pending
+    if (paymentMethod.value === 'QRIS' && qrisOrderId.value === orderId && qrisStatus.value === 'pending') {
+      qrisPollInterval.value = setTimeout(poll, 3000)
+    }
+  }
+
+  // Queue first check in 3 seconds
+  qrisPollInterval.value = setTimeout(poll, 3000)
 
   // Countdown timer (QR expires in 15 min = 900 seconds)
   if (qrisExpiryTime.value) {
@@ -296,6 +318,8 @@ const openCheckout = () => {
 }
 
 const completePayment = async () => {
+  if (isCompletingPayment.value) return
+
   if (paymentMethod.value === 'Tunai') {
     if (!cashReceived.value || Number(cashReceived.value) < finalTotal.value) {
       alert('Uang pembayaran tidak mencukupi!')
@@ -368,14 +392,9 @@ const completePayment = async () => {
       showCheckoutModal.value = false
       showSuccessModal.value = true
 
-      // Refresh store products locally (deduct stocks)
-      state.products = state.products.map(p => {
-        const cartItem = itemsCopy.find(item => item.product.id === p.id)
-        if (cartItem) {
-          p.stock = Math.max(0, p.stock - cartItem.quantity)
-        }
-        return p
-      })
+      // Reload global transactions and products to keep views automatically updated without manual refresh
+      fetchTransactions()
+      fetchProducts()
 
       // Show success modal for 1.8 seconds, then show receipt
       setTimeout(() => {
