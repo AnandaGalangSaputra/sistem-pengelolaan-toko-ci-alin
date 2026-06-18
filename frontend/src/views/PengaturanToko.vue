@@ -452,6 +452,10 @@ const triggerToast = (msg) => {
               </li>
               <li class="d-flex align-items-center">
                 <i class="bi bi-check-circle-fill text-primary me-2"></i>
+                <strong>Asisten Pintar AI:</strong>&nbsp;Google Gemini AI Integration
+              </li>
+              <li class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-primary me-2"></i>
                 <strong>Pembayaran:</strong>&nbsp;Simulasi QRIS Midtrans Sandbox
               </li>
             </ul>
@@ -476,7 +480,7 @@ const triggerToast = (msg) => {
                 </div>
                 <p class="text-secondary small mb-0 ms-4.5">
                   Daftarkan area rak fisik di menu <strong>Daftar Rak</strong> dengan warna custom. Masuk ke
-                  <strong>Data Barang</strong> untuk mendaftarkan barang baru. Untuk barang masuk, gunakan tombol restok
+                   <strong>Data Barang</strong> untuk mendaftarkan barang baru. Untuk barang masuk, gunakan tombol restok
                   di menu <strong>Stok Barang</strong> untuk memperbarui jumlah persediaan.
                 </p>
               </div>
@@ -524,9 +528,35 @@ const triggerToast = (msg) => {
                   </div>
                 </div>
                 <p class="text-secondary small mb-0 ms-4.5">
-                  Akses <strong>Laporan Transaksi</strong> untuk mencetak PDF bulanan/harian. Di menu
-                  <strong>Akun</strong>, owner dapat mengklik tab <strong>Kelola Pengguna</strong> untuk mendaftarkan
-                  akun kasir karyawan baru atau mengedit data login.
+                  Akses <strong>Laporan Transaksi</strong> untuk meninjau omset/keuntungan bersih. Gunakan filter **Pilih Bulan** kalender visual untuk menyaring data. Anda juga dapat mencetak PDF **Laporan Bulanan** atau **Laporan Harian** (yang menyaring hari ini secara dinamis). Owner dapat mendaftarkan akun kasir baru di menu **Akun**.
+                </p>
+              </div>
+
+              <!-- Item 5 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">5</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Jadwal & Presensi Karyawan</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Jadwal & Presensi</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Staf karyawan melakukan **Presensi Harian** dengan verifikasi foto selfie real-time via webcam di tab Presensi. Owner dapat mengelola jadwal shift mingguan staf (Senin-Minggu) dan memantau log masuk foto, on-time rate, dan rincian kehadiran bulanan di menu ini.
+                </p>
+              </div>
+
+              <!-- Item 6 -->
+              <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                <div class="d-flex gap-2 mb-2">
+                  <span class="avatar-circle-sm bg-primary text-white fw-bold">6</span>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-0.5" style="font-size: 0.95rem;">Asisten Pintar AI Gemini</h5>
+                    <span class="text-muted small" style="font-size: 0.72rem;">Menu: Header Kanan (Gemini Chat Icon)</span>
+                  </div>
+                </div>
+                <p class="text-secondary small mb-0 ms-4.5">
+                  Klik ikon chat di sebelah kanan header atas untuk membuka asisten **Google Gemini AI**. Asisten AI siap membantu Anda menjawab pertanyaan POS, menganalisis stok barang, membuat draf promosi, atau memandu kendala operasional toko secara real-time.
                 </p>
               </div>
             </div>

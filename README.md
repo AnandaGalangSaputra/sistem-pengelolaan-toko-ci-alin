@@ -7,14 +7,20 @@ Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN merupakan platfor
 ## 🌟 Fitur Utama
 
 - **Autentikasi Multi-Role**:
-  - **Owner**: Kontrol penuh data produk/rak, manajemen target penjualan, laporan keuntungan bersih (profit/loss), serta analisis performa finansial.
-  - **Karyawan**: Akses modul kasir, restok barang, pemantauan tata letak rak, serta melihat riwayat transaksi pribadinya selama shift bekerja (tanpa akses ke HPP/keuntungan bersih toko).
+  - **Owner**: Kontrol penuh data produk/rak, manajemen target penjualan, laporan keuntungan bersih (profit/loss), analisis performa finansial, pengaturan jadwal kerja mingguan karyawan, serta pemantauan log absensi foto.
+  - **Karyawan**: Akses modul kasir, restok barang, pemantauan tata letak rak, melihat riwayat transaksi pribadinya selama shift bekerja (tanpa akses ke HPP/keuntungan bersih toko), melihat jadwal kerja pribadinya, dan melakukan absensi harian.
+- **Jadwal & Presensi Karyawan**:
+  - **Jadwal Kerja Mingguan**: Grid penugasan shift kerja Senin - Minggu untuk setiap karyawan yang dikelola langsung oleh Owner secara real-time.
+  - **Presensi Selfie Webcam**: Sistem pencatatan kehadiran mandiri staf menggunakan kamera webcam komputer (HTML5 API `getUserMedia`) dengan pencocokan status (Hadir/Terlambat) berdasarkan shift yang ditugaskan serta deteksi zona waktu WIB (`Asia/Jakarta`).
+  - **Laporan Kehadiran Kumulatif**: Dashboard ringkasan on-time rate karyawan lengkap dengan filter bulan dan visualisasi Conic-Gradient Circle Chart.
 - **Interactive Floor Plan (Denah Rak)**: Visualisasi rak fisik toko dengan fitur **Drag & Drop** untuk penyesuaian posisi rak secara dinamis, serta skema warna HSL otomatis berdasarkan inisial blok sektor rak.
 - **Manajemen Inventaris & Stok**: Pemantauan stok aktif, visualisasi indikator stok kritis/habis, serta sistem restok barang yang cepat.
 - **Point of Sale (POS) Kasir**:
-  - Keranjang belanja interaktif.
+  - Keranjang belanja interaktif dengan restock/checkout cepat.
   - Pengurangan stok barang otomatis setelah checkout.
-  - Penerapan potongan harga/diskon langsung secara fleksibel.
+  - Penerapan potongan harga/diskon langsung secara fleksibel (disimpan persisten ke dalam riwayat diskon dashboard).
+- **Asisten Pintar AI Gemini**: Terintegrasi dengan **Google Gemini AI (Google AI Studio API)** untuk asisten interaktif POS kasir guna membantu menjawab pertanyaan operasional, saran promosi, dan format broadcast WhatsApp.
+- **Laporan Penjualan Dinamis**: Analisis total omset, total HPP, laba/rugi bersih, potongan diskon, dan volume transaksi dilengkapi dengan filter **Pilih Bulan** berbasis kalender visual (Month Picker) dan opsi cetak laporan PDF Harian (hanya hari ini) vs Bulanan.
 - **Integrasi Pembayaran QRIS**: Terintegrasi dengan **Midtrans Sandbox API** untuk pembuatan QR Code QRIS secara real-time dan pemantauan status transaksi otomatis.
 - **Cetak Nota Belanja (Thermal Printer)**: Pratinjau struk thermal dengan opsi ukuran kertas **58mm** dan **80mm** (dilengkapi fitur auto-print).
 - **WhatsApp API Gateway**: Sistem gateway pengiriman pesan broadcast pemberitahuan toko/promo ke pelanggan menggunakan WhatsApp (berbasis library Baileys).
@@ -28,6 +34,7 @@ Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN merupakan platfor
 - **Build Tool**: Vite
 - **Routing**: Vue Router 4
 - **State Management**: Vue 3 Reactive Store
+- **AI Integration**: Google Gemini AI (Google AI Studio API SDK)
 - **Styling**: Vanilla CSS (Premium & Modern Theme) + Bootstrap Icons
 
 ### Backend (Laravel API)
