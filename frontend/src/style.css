@@ -7,6 +7,7 @@
   --text-primary: #121212;
   --text-muted: #6c757d;
   --transition-speed: 0.25s;
+  --zoom-scale: 1;
 }
 
 body {
@@ -1322,6 +1323,21 @@ body {
   .dashboard-content {
     padding: 20px;
     overflow-y: visible;
+  }
+}
+
+/* Zoom Scale Height Fixes (Desktop Only) */
+@media (min-width: 992px) {
+  .stok-barang-wrapper,
+  .pengaturan-wrapper,
+  .laporan-wrapper,
+  .data-barang-wrapper,
+  .kasir-wrapper,
+  .dashboard-content-wrapper,
+  .broadcast-page-wrapper,
+  .daftar-rak-wrapper,
+  .akun-wrapper {
+    height: calc((100vh / var(--zoom-scale)) - 70px) !important;
   }
 }
 
