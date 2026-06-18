@@ -161,8 +161,12 @@ const formatRupiah = (val) => {
       </div>
 
       <div class="d-flex gap-2">
-        <router-link to="/dashboard-karyawan/kasir" class="btn btn-primary-custom">
-          <i class="bi bi-calculator me-2"></i>
+        <router-link to="/dashboard-karyawan/jadwal" class="btn btn-outline-primary-custom d-flex align-items-center gap-2">
+          <i class="bi bi-camera-fill"></i>
+          <span>Presensi & Jadwal</span>
+        </router-link>
+        <router-link to="/dashboard-karyawan/kasir" class="btn btn-primary-custom d-flex align-items-center gap-2">
+          <i class="bi bi-calculator"></i>
           <span>Buka Kasir Penjualan</span>
         </router-link>
       </div>

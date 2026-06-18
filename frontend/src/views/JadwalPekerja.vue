@@ -363,6 +363,77 @@ const todayPresenceStatusLabel = computed(() => {
   if (!presence) return 'Belum Presensi'
   return presence.status === 'Hadir' ? 'Hadir (Tepat Waktu)' : 'Hadir (Terlambat)'
 })
+
+// Calculate today's date in 'YYYY-MM-DD' format matching Jakarta timezone
+const getTodayDateStr = () => {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const date = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${date}`
+}
+
+const totalKaryawan = computed(() => {
+  return state.users.filter(u => u.role !== 'owner').length
+})
+
+const todayLogs = computed(() => {
+  const today = getTodayDateStr()
+  if (!state.presenses.logs) return []
+  return state.presenses.logs.filter(log => log.tanggal === today)
+})
+
+const hadirToday = computed(() => {
+  return todayLogs.value.filter(log => log.status === 'Hadir').length
+})
+
+const terlambatToday = computed(() => {
+  return todayLogs.value.filter(log => log.status === 'Terlambat').length
+})
+
+const belumAbsenToday = computed(() => {
+  const total = totalKaryawan.value
+  const present = todayLogs.value.length
+  return Math.max(0, total - present)
+})
+
+// Circular/Doughnut Chart conic-gradient style
+const circleChartStyle = computed(() => {
+  const total = totalKaryawan.value || 1
+  const hadirPct = (hadirToday.value / total) * 100
+  const terlambatPct = (terlambatToday.value / total) * 100
+
+  const seg1 = hadirPct
+  const seg2 = hadirPct + terlambatPct
+
+  return {
+    background: `conic-gradient(
+      #10b981 0% ${seg1}%, 
+      #f59e0b ${seg1}% ${seg2}%, 
+      #cbd5e1 ${seg2}% 100%
+    )`
+  }
+})
+
+// Cumulative employee reports summary
+const employeeReports = computed(() => {
+  const employees = state.users.filter(u => u.role !== 'owner')
+  return employees.map(emp => {
+    const empLogs = state.presenses.logs ? state.presenses.logs.filter(log => log.user_id === emp.id) : []
+    const totalHadir = empLogs.filter(log => log.status === 'Hadir').length
+    const totalTerlambat = empLogs.filter(log => log.status === 'Terlambat').length
+    const totalMasuk = totalHadir + totalTerlambat
+    const attendancePercentage = totalMasuk > 0 ? Math.round((totalHadir / totalMasuk) * 100) : 0
+    
+    return {
+      user: emp,
+      totalHadir,
+      totalTerlambat,
+      totalMasuk,
+      attendancePercentage
+    }
+  })
+})
 </script>
 
 <template>
@@ -655,67 +726,152 @@ const todayPresenceStatusLabel = computed(() => {
           </div>
         </div>
 
-        <!-- 2. OWNER VIEW: ATTENDANCE TRACKER LOGS -->
-        <div v-else class="card-content-box shadow-sm animate-fade-in">
-          <div class="box-header mb-4">
-            <h2 class="box-title">Log Presensi Semua Karyawan</h2>
-            <p class="box-subtitle">Pemantauan data kehadiran masuk pekerja harian, lengkap dengan verifikasi foto wajah.</p>
+        <!-- 2. OWNER VIEW: ATTENDANCE TRACKER LOGS & REPORTS -->
+        <div v-else class="d-flex flex-column gap-4 animate-fade-in">
+          
+          <!-- Top Section: Today's Summary & Circle Chart -->
+          <div class="row g-4">
+            <!-- Today's Attendance Statistics & Chart -->
+            <div class="col-12 col-md-5">
+              <div class="card-content-box shadow-sm h-100 d-flex flex-column align-items-center text-center">
+                <div class="box-header mb-4 w-100 text-start">
+                  <h2 class="box-title">Kehadiran Hari Ini</h2>
+                  <p class="box-subtitle">Grafik persentase masuk kerja staf hari ini.</p>
+                </div>
+                
+                <!-- Conic Gradient Circular Chart -->
+                <div class="position-relative d-flex align-items-center justify-content-center mb-4" style="width: 160px; height: 160px;">
+                  <div class="rounded-circle" :style="circleChartStyle" style="width: 100%; height: 100%; transition: background 0.3s ease;"></div>
+                  <div class="rounded-circle bg-white position-absolute d-flex flex-column align-items-center justify-content-center shadow-sm" style="width: 110px; height: 110px;">
+                    <span class="fs-4 fw-bold text-dark">{{ todayLogs.length }} / {{ totalKaryawan }}</span>
+                    <span class="text-muted small" style="font-size: 0.75rem;">Hadir</span>
+                  </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="w-100 d-flex justify-content-center gap-3 flex-wrap small">
+                  <div class="d-flex align-items-center gap-1.5">
+                    <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background-color: #10b981;"></span>
+                    <span class="text-secondary fw-semibold">Tepat Waktu: {{ hadirToday }}</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-1.5">
+                    <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background-color: #f59e0b;"></span>
+                    <span class="text-secondary fw-semibold">Terlambat: {{ terlambatToday }}</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-1.5">
+                    <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background-color: #cbd5e1;"></span>
+                    <span class="text-secondary fw-semibold">Belum Absen: {{ belumAbsenToday }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cumulative Summary stats of all workers -->
+            <div class="col-12 col-md-7">
+              <div class="card-content-box shadow-sm h-100">
+                <div class="box-header mb-3">
+                  <h2 class="box-title">Laporan Akumulasi Presensi Karyawan</h2>
+                  <p class="box-subtitle">Total akumulasi log kehadiran masuk kerja masing-masing karyawan.</p>
+                </div>
+                
+                <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
+                  <table class="table custom-table-mini align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead>
+                      <tr>
+                        <th>Karyawan</th>
+                        <th class="text-center">Tepat Waktu</th>
+                        <th class="text-center">Terlambat</th>
+                        <th class="text-center">Total Masuk</th>
+                        <th class="text-center">Rasio On-Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="rep in employeeReports" :key="rep.user.id">
+                        <td>
+                          <div class="fw-bold text-dark text-truncate" style="max-width: 140px;">{{ rep.user.name }}</div>
+                        </td>
+                        <td class="text-center text-success fw-bold">{{ rep.totalHadir }}</td>
+                        <td class="text-center text-warning fw-bold">{{ rep.totalTerlambat }}</td>
+                        <td class="text-center fw-bold text-dark">{{ rep.totalMasuk }} kali</td>
+                        <td class="text-center">
+                          <span class="badge" :class="rep.attendancePercentage >= 80 ? 'bg-success' : (rep.attendancePercentage >= 55 ? 'bg-warning' : 'bg-danger')">
+                            {{ rep.attendancePercentage }}%
+                          </span>
+                        </td>
+                      </tr>
+                      <tr v-if="employeeReports.length === 0">
+                        <td colspan="5" class="text-center text-muted py-3">Tidak ada data karyawan.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="table-responsive">
-            <table class="table custom-table align-middle">
-              <thead>
-                <tr>
-                  <th style="width: 60px;">No</th>
-                  <th>Karyawan</th>
-                  <th>Tanggal Kerja</th>
-                  <th>Waktu Masuk</th>
-                  <th>Status Kehadiran</th>
-                  <th class="text-center">Foto Selfie</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(log, idx) in state.presenses.logs" :key="log.id">
-                  <td>{{ idx + 1 }}</td>
-                  <td>
-                    <div class="d-flex align-items-center gap-2.5">
-                      <div class="avatar-circle">
-                        {{ log.user ? log.user.name.charAt(0).toUpperCase() : '?' }}
+          <!-- Bottom Section: Daily Selfie logs -->
+          <div class="card-content-box shadow-sm">
+            <div class="box-header mb-4">
+              <h2 class="box-title">Log Presensi Semua Karyawan</h2>
+              <p class="box-subtitle">Pemantauan data kehadiran masuk pekerja harian, lengkap dengan verifikasi foto wajah.</p>
+            </div>
+
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table custom-table align-middle">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">No</th>
+                    <th>Karyawan</th>
+                    <th>Tanggal Kerja</th>
+                    <th>Waktu Masuk</th>
+                    <th>Status Kehadiran</th>
+                    <th class="text-center">Foto Selfie</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(log, idx) in state.presenses.logs" :key="log.id">
+                    <td>{{ idx + 1 }}</td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2.5">
+                        <div class="avatar-circle">
+                          {{ log.user ? log.user.name.charAt(0).toUpperCase() : '?' }}
+                        </div>
+                        <div>
+                          <div class="fw-bold text-dark">{{ log.user ? log.user.name : 'Unknown' }}</div>
+                          <div class="text-muted small">@{{ log.user ? log.user.username : 'karyawan' }}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div class="fw-bold text-dark">{{ log.user ? log.user.name : 'Unknown' }}</div>
-                        <div class="text-muted small">@{{ log.user ? log.user.username : 'karyawan' }}</div>
+                    </td>
+                    <td class="fw-semibold">{{ formatDate(log.tanggal) }}</td>
+                    <td class="fw-bold text-dark">{{ formatTime(log.waktu_masuk) }} WIB</td>
+                    <td>
+                      <span class="badge" :class="log.status === 'Hadir' ? 'bg-success' : 'bg-warning'">
+                        {{ log.status }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <div class="d-inline-block position-relative">
+                        <img 
+                          :src="getBackendImageUrl(log.foto_path)" 
+                          alt="Photo Selfie" 
+                          class="rounded-3 border cursor-pointer hover-scale shadow-xs"
+                          @click="viewFullPhoto(getBackendImageUrl(log.foto_path))"
+                          style="width: 60px; height: 45px; object-fit: cover; transition: all 0.2s;"
+                        />
                       </div>
-                    </div>
-                  </td>
-                  <td class="fw-semibold">{{ formatDate(log.tanggal) }}</td>
-                  <td class="fw-bold text-dark">{{ formatTime(log.waktu_masuk) }} WIB</td>
-                  <td>
-                    <span class="badge" :class="log.status === 'Hadir' ? 'bg-success' : 'bg-warning'">
-                      {{ log.status }}
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <div class="d-inline-block position-relative">
-                      <img 
-                        :src="getBackendImageUrl(log.foto_path)" 
-                        alt="Photo Selfie" 
-                        class="rounded-3 border cursor-pointer hover-scale shadow-xs"
-                        @click="viewFullPhoto(getBackendImageUrl(log.foto_path))"
-                        style="width: 60px; height: 45px; object-fit: cover; transition: all 0.2s;"
-                      />
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="!state.presenses.logs || state.presenses.logs.length === 0">
-                  <td colspan="6" class="text-center py-5 text-muted">
-                    <i class="bi bi-camera-video-off-fill d-block fs-1 mb-2 text-secondary"></i>
-                    <span>Belum ada data presensi yang masuk hari ini.</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                  <tr v-if="!state.presenses.logs || state.presenses.logs.length === 0">
+                    <td colspan="6" class="text-center py-5 text-muted">
+                      <i class="bi bi-camera-video-off-fill d-block fs-1 mb-2 text-secondary"></i>
+                      <span>Belum ada data presensi yang masuk hari ini.</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+
         </div>
       </div>
     </div>
