@@ -240,7 +240,7 @@ export const fetchTransactions = async () => {
     })
     const resData = await response.json()
     if (resData.success) {
-      state.transactions = resData.data.map(item => {
+      const parsedTransactions = resData.data.map(item => {
         const dateObj = parseUtcToLocal(item.tanggal)
         const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
         const itemsCount = item.details ? item.details.reduce((sum, d) => sum + d.qty, 0) : 0
@@ -273,6 +273,25 @@ export const fetchTransactions = async () => {
             name: item.nama_pelanggan || 'Umum',
             phone: item.no_telp_pelanggan || ''
           }
+        }
+      })
+
+      state.transactions = parsedTransactions
+
+      // Dynamically populate state.discounts from transactions where discount > 0
+      const transactionsWithDiscounts = parsedTransactions.filter(tx => tx.discount > 0)
+      state.discounts = transactionsWithDiscounts.map(tx => {
+        const itemNames = tx.details.map(d => d.barang ? `${d.barang.name} (x${d.qty})` : 'Barang').join(', ')
+        const truncatedItemNames = itemNames.length > 30 ? itemNames.substring(0, 27) + '...' : itemNames
+        
+        return {
+          id: tx.id,
+          item: truncatedItemNames || 'Transaksi Kasir',
+          original: tx.total + tx.discount,
+          requested: tx.total,
+          discountAmount: tx.discount,
+          time: tx.time,
+          status: 'Aktif'
         }
       })
     }
