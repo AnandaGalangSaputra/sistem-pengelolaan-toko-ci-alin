@@ -650,7 +650,7 @@ const triggerToast = (msg) => {
   font-size: 0.82rem;
   flex-shrink: 0;
 }
-.ms-4.5 {
+.ms-4\.5 {
   margin-left: 2.25rem !important;
 }
 .bg-primary-subtle {

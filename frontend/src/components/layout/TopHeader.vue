@@ -9,6 +9,11 @@
         </div>
 
         <div class="header-right">
+            <!-- AI Chat Assistant Trigger -->
+            <button @click="toggleAIChat" class="ai-chat-trigger-btn me-2 position-relative" :class="{ 'active': showAIChat }" title="AI Asisten Toko">
+                <i class="bi bi-stars"></i>
+            </button>
+
             <!-- Notification Container Wrapper -->
             <div class="notification-container-wrapper position-relative me-3">
                 <button @click="toggleDropdown" class="notification-bell-btn position-relative" :class="{ 'active': showDropdown }">
@@ -81,11 +86,15 @@
             </div>
         </div>
     </header>
+
+    <!-- AI Chat Assistant Drawer -->
+    <AIChatAssistant :show="showAIChat" @close="showAIChat = false" />
 </template>
  
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { state, markAllNotificationsAsRead, clearNotifications } from '../../store/store.js'
+import AIChatAssistant from './AIChatAssistant.vue'
 
 defineProps({
     searchQuery: String,
@@ -99,6 +108,14 @@ defineEmits([
 
 const timeString = ref('')
 const showDropdown = ref(false)
+const showAIChat = ref(false)
+
+const toggleAIChat = () => {
+    showAIChat.value = !showAIChat.value
+    if (showAIChat.value) {
+        showDropdown.value = false
+    }
+}
 
 const unreadCount = computed(() => {
   return state.notifications.filter(n => !n.read).length
@@ -125,6 +142,9 @@ const getIconClass = (type) => {
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
+  if (showDropdown.value) {
+    showAIChat.value = false
+  }
 }
 
 const handleMarkAllRead = () => {
@@ -173,6 +193,34 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.ai-chat-trigger-btn {
+    background: transparent;
+    border: none;
+    padding: 8px;
+    font-size: 1.25rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 40px;
+}
+
+.ai-chat-trigger-btn i {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+.ai-chat-trigger-btn:hover,
+.ai-chat-trigger-btn.active {
+    background-color: #ede9fe;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.15);
+}
+
 .notification-container-wrapper {
     z-index: 1050;
 }
