@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import TopHeader from './TopHeader.vue'
-import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, fetchCustomers, fetchBroadcastHistory, checkWhatsappStatus, fetchUsers } from '../../store/store.js'
+import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, fetchCustomers, fetchBroadcastHistory, checkWhatsappStatus, fetchUsers, fetchSchedules, fetchPresensi } from '../../store/store.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -26,6 +26,8 @@ onMounted(() => {
     fetchTransactions()
     fetchCustomers()
     fetchBroadcastHistory()
+    fetchSchedules()
+    fetchPresensi()
     if (state.currentUser.role.toLowerCase() === 'owner') {
       fetchUsers()
     }
@@ -54,7 +56,8 @@ const sidebarMenu = computed(() => {
     { id: 'daftar-rak', label: 'Daftar Rak', icon: 'bi-grid-3x3', active: route.name === 'DaftarRak' },
     { id: 'kasir', label: 'Kasir', icon: 'bi-calculator', active: route.name === 'Kasir' },
     { id: 'broadcast', label: 'Broadcast WA', icon: 'bi-whatsapp', active: route.name === 'BroadcastWA' },
-    { id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' }
+    { id: 'laporan', label: 'Laporan Transaksi', icon: 'bi-bar-chart-line', active: route.name === 'LaporanTransaksi' },
+    { id: 'jadwal', label: 'Jadwal & Presensi', icon: 'bi-calendar3', active: route.name === 'JadwalPekerja' }
   ]
 
   menus.push({ id: 'pengaturan', label: 'Pengaturan', icon: 'bi-gear', active: route.name === 'PengaturanToko' })
@@ -72,6 +75,7 @@ const changeMenu = (menuId) => {
   else if (menuId === 'broadcast') router.push('/dashboard-karyawan/broadcast')
   else if (menuId === 'daftar-rak') router.push('/dashboard-karyawan/daftar-rak')
   else if (menuId === 'laporan') router.push('/dashboard-karyawan/laporan')
+  else if (menuId === 'jadwal') router.push('/dashboard-karyawan/jadwal')
   else if (menuId === 'pengaturan') router.push('/dashboard-karyawan/pengaturan')
   else if (menuId === 'akun') router.push('/dashboard-karyawan/akun')
 }

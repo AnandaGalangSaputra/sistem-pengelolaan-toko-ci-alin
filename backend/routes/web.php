@@ -61,3 +61,13 @@ Route::get('/api/whatsapp/history', [App\Http\Controllers\WhatsappController::cl
 // QRIS Midtrans Routes
 Route::post('/api/qris/create', [App\Http\Controllers\QrisController::class, 'createQris']);
 Route::get('/api/qris/status/{orderId}', [App\Http\Controllers\QrisController::class, 'checkStatus']);
+
+// Schedules
+Route::get('/api/schedules', [App\Http\Controllers\ScheduleController::class, 'index']);
+Route::post('/api/schedules', [App\Http\Controllers\ScheduleController::class, 'store']);
+Route::delete('/api/schedules/{id}', [App\Http\Controllers\ScheduleController::class, 'destroy']);
+
+// Presensi
+Route::get('/api/presensi', [App\Http\Controllers\PresensiController::class, 'index']);
+Route::post('/api/presensi', [App\Http\Controllers\PresensiController::class, 'store']);
+

@@ -188,7 +188,9 @@ export const state = reactive({
   salesTarget: loadState('toko_alin_sales_target', 3000000),
   searchQuery: '',
   broadcastDraft: '',
-  notifications: loadState('toko_alin_notifications', [])
+  notifications: loadState('toko_alin_notifications', []),
+  schedules: [],
+  presenses: { today: null, history: [], logs: [] }
 })
 
 export const fetchProducts = async () => {
@@ -908,6 +910,8 @@ export const loginUser = async (username, password) => {
       fetchTransactions()
       fetchCustomers()
       fetchBroadcastHistory()
+      fetchSchedules()
+      fetchPresensi()
       if (data.user.role === 'owner') {
         fetchUsers()
       }
@@ -944,6 +948,8 @@ export const logoutUser = async () => {
   state.transactions = []
   state.customers = []
   state.broadcastHistory = []
+  state.schedules = []
+  state.presenses = { today: null, history: [], logs: [] }
 }
 
 export const updateProfile = async (name, role) => {
@@ -991,5 +997,120 @@ export const updatePassword = async (currentPassword, newPassword) => {
   } catch (error) {
     console.error('Error updating password:', error)
     return { success: false, message: 'Terjadi kesalahan jaringan saat memperbarui kata sandi!' }
+  }
+}
+
+export const fetchSchedules = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/schedules', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      state.schedules = resData.data.schedules
+    }
+  } catch (error) {
+    console.error('Error fetching schedules:', error)
+  }
+}
+
+export const saveSchedule = async (user_id, hari, shift = '', keterangan = '') => {
+  try {
+    const response = await fetch('http://localhost:8000/api/schedules', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ user_id: Number(user_id), hari, shift, keterangan })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.schedules.findIndex(s => s.user_id === user_id && s.hari === hari)
+      if (idx !== -1) {
+        state.schedules[idx] = resData.data
+      } else {
+        state.schedules.push(resData.data)
+      }
+      addNotification('Jadwal Disimpan', `Jadwal hari ${hari} untuk pekerja berhasil disimpan.`, 'success')
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menyimpan jadwal.' }
+    }
+  } catch (error) {
+    console.error('Error saving schedule:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan!' }
+  }
+}
+
+export const deleteSchedule = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/schedules/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      const idx = state.schedules.findIndex(s => s.id === id)
+      if (idx !== -1) {
+        state.schedules.splice(idx, 1)
+      }
+      addNotification('Jadwal Dihapus', `Jadwal kerja berhasil dihapus.`, 'warning')
+      return { success: true }
+    } else {
+      return { success: false, message: resData.message || 'Gagal menghapus jadwal.' }
+    }
+  } catch (error) {
+    console.error('Error deleting schedule:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan!' }
+  }
+}
+
+export const fetchPresensi = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/presensi', {
+      credentials: 'include'
+    })
+    const resData = await response.json()
+    if (resData.success) {
+      if (resData.data.role === 'owner') {
+        state.presenses.logs = resData.data.logs
+      } else {
+        state.presenses.today = resData.data.today
+        state.presenses.history = resData.data.history
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching presensi:', error)
+  }
+}
+
+export const submitPresensi = async (foto) => {
+  try {
+    const response = await fetch('http://localhost:8000/api/presensi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ foto })
+    })
+    const resData = await response.json()
+    if (response.ok && resData.success) {
+      state.presenses.today = resData.data
+      fetchPresensi()
+      addNotification('Presensi Berhasil', `Absensi masuk berhasil dicatat. Status: ${resData.data.status}`, 'success')
+      return { success: true, data: resData.data }
+    } else {
+      return { success: false, message: resData.message || 'Gagal mengirim presensi.' }
+    }
+  } catch (error) {
+    console.error('Error submitting presensi:', error)
+    return { success: false, message: 'Terjadi kesalahan jaringan saat mengirim presensi!' }
   }
 }

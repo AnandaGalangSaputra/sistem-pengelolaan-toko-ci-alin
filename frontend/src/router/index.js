@@ -59,6 +59,11 @@ const routes = [
         path: 'akun',
         name: 'AkunKaryawan',
         component: () => import('../views/AkunKaryawan.vue')
+      },
+      {
+        path: 'jadwal',
+        name: 'JadwalPekerja',
+        component: () => import('../views/JadwalPekerja.vue')
       }
     ]
   },
