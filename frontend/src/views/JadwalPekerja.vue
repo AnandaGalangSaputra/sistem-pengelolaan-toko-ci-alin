@@ -415,11 +415,23 @@ const circleChartStyle = computed(() => {
   }
 })
 
+const filterMonth = ref('')
+
 // Cumulative employee reports summary
 const employeeReports = computed(() => {
   const employees = state.users.filter(u => u.role !== 'owner')
   return employees.map(emp => {
-    const empLogs = state.presenses.logs ? state.presenses.logs.filter(log => log.user_id === emp.id) : []
+    let empLogs = state.presenses.logs ? state.presenses.logs.filter(log => log.user_id === emp.id) : []
+    
+    // Apply month filter if selected
+    if (filterMonth.value !== '') {
+      const monthNum = parseInt(filterMonth.value)
+      empLogs = empLogs.filter(log => {
+        const parts = log.tanggal.split('-') // YYYY-MM-DD
+        return parts.length >= 2 && parseInt(parts[1]) === monthNum
+      })
+    }
+
     const totalHadir = empLogs.filter(log => log.status === 'Hadir').length
     const totalTerlambat = empLogs.filter(log => log.status === 'Terlambat').length
     const totalMasuk = totalHadir + totalTerlambat
@@ -769,9 +781,28 @@ const employeeReports = computed(() => {
             <!-- Cumulative Summary stats of all workers -->
             <div class="col-12 col-md-7">
               <div class="card-content-box shadow-sm h-100">
-                <div class="box-header mb-3">
-                  <h2 class="box-title">Laporan Akumulasi Presensi Karyawan</h2>
-                  <p class="box-subtitle">Total akumulasi log kehadiran masuk kerja masing-masing karyawan.</p>
+                <div class="box-header mb-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                  <div>
+                    <h2 class="box-title">Laporan Akumulasi Presensi Karyawan</h2>
+                    <p class="box-subtitle">Total akumulasi log kehadiran masuk kerja masing-masing karyawan.</p>
+                  </div>
+                  <div>
+                    <select v-model="filterMonth" class="form-select form-select-sm rounded-3 border py-1.5" style="width: auto; min-width: 140px; font-size: 0.8rem;">
+                      <option value="">Semua Bulan</option>
+                      <option value="1">Januari</option>
+                      <option value="2">Februari</option>
+                      <option value="3">Maret</option>
+                      <option value="4">April</option>
+                      <option value="5">Mei</option>
+                      <option value="6">Juni</option>
+                      <option value="7">Juli</option>
+                      <option value="8">Agustus</option>
+                      <option value="9">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                  </div>
                 </div>
                 
                 <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">

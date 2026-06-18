@@ -9,13 +9,129 @@ const formatRupiah = (val) => {
 // Compute statistics from store transactions
 const isOwner = computed(() => state.currentUser?.role?.toLowerCase() === 'owner')
 
-// Compute transactions filtered by role: Owner sees all, Karyawan only sees their own transactions
-const transactionsList = computed(() => {
-  if (isOwner.value) {
-    return state.transactions
-  }
-  return state.transactions.filter(tx => tx.cashierName === state.currentUser?.name)
+// Month filter state
+const filterMonth = ref('')
+
+// Compute unique years-months from transactions data for select options
+const availableMonths = computed(() => {
+  const monthsSet = new Set()
+  state.transactions.forEach(tx => {
+    if (tx.date && tx.date.length >= 7) {
+      monthsSet.add(tx.date.substring(0, 7)) // "YYYY-MM"
+    }
+  })
+  
+  const sorted = Array.from(monthsSet).sort().reverse()
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ]
+  
+  return sorted.map(ym => {
+    const [year, month] = ym.split('-')
+    const monthName = monthNames[parseInt(month, 10) - 1] || month
+    return {
+      value: ym,
+      label: `${monthName} ${year}`
+    }
+  })
 })
+
+// Compute transactions filtered by role and selected month
+const transactionsList = computed(() => {
+  let list = []
+  if (isOwner.value) {
+    list = state.transactions
+  } else {
+    list = state.transactions.filter(tx => tx.cashierName === state.currentUser?.name)
+  }
+
+  if (filterMonth.value) {
+    list = list.filter(tx => {
+      if (!tx.date) return false
+      return tx.date.startsWith(filterMonth.value)
+    })
+  }
+
+  return list
+})
+
+// Today transactions helpers (specifically for Cetak Harian)
+const getTodayDateStr = () => {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const date = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${date}` // "YYYY-MM-DD"
+}
+
+const getTodayDateIndonesian = () => {
+  const d = new Date()
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ]
+  return `${String(d.getDate()).padStart(2, '0')} ${monthNames[d.getMonth()]} ${d.getFullYear()}`
+}
+
+const todayTransactionsOnly = computed(() => {
+  const todayStr = getTodayDateStr()
+  let baseList = []
+  if (isOwner.value) {
+    baseList = state.transactions
+  } else {
+    baseList = state.transactions.filter(tx => tx.cashierName === state.currentUser?.name)
+  }
+  return baseList.filter(tx => tx.date && tx.date.startsWith(todayStr))
+})
+
+const todayRevenueOnly = computed(() => {
+  return todayTransactionsOnly.value.reduce((acc, tx) => acc + tx.total, 0)
+})
+
+const todayCogsOnly = computed(() => {
+  return todayTransactionsOnly.value.reduce((acc, tx) => {
+    const txCogs = tx.details ? tx.details.reduce((sum, d) => sum + (d.barang ? d.barang.harga_beli * d.qty : 0), 0) : 0
+    return acc + txCogs
+  }, 0)
+})
+
+const todayNetProfitOnly = computed(() => {
+  return todayRevenueOnly.value - todayCogsOnly.value
+})
+
+const todayTransactionsCountOnly = computed(() => {
+  return todayTransactionsOnly.value.length
+})
+
+// Robust month name formatter
+const formatYearMonthIndonesian = (ym) => {
+  if (!ym) return ''
+  const [year, month] = ym.split('-')
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ]
+  const monthName = monthNames[parseInt(month, 10) - 1] || month
+  return `${monthName} ${year}`
+}
+
+// Display label of currently selected month in print/view
+const currentFilteredMonthLabel = computed(() => {
+  if (!filterMonth.value) return 'Semua Periode'
+  return formatYearMonthIndonesian(filterMonth.value)
+})
+
+// Current day and full date display helper
+const getTodayFullDateIndonesian = () => {
+  const d = new Date()
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ]
+  return `${days[d.getDay()]}, ${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`
+}
 
 const totalRevenue = computed(() => {
   return transactionsList.value.reduce((acc, tx) => acc + tx.total, 0)
@@ -241,19 +357,50 @@ const successToastMsg = ref('')
     </transition>
 
     <!-- Page Title & Actions -->
-    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
       <div>
         <h1 class="page-title">Laporan Transaksi</h1>
+        <div class="d-flex align-items-center gap-2 mb-1.5">
+          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-3 fw-semibold" style="font-size: 0.78rem;">
+            <i class="bi bi-calendar-check-fill me-1"></i> Hari Ini: {{ getTodayFullDateIndonesian() }}
+          </span>
+        </div>
         <p class="page-subtitle">Analisis hasil penjualan, omset harian, potongan diskon, dan capaian target Toko Ce Alin.</p>
       </div>
 
-      <div class="d-flex gap-2">
-        <button @click="triggerPrint('harian')" class="btn btn-outline-primary-custom d-flex align-items-center py-2 px-3">
-          <i class="bi bi-printer-fill me-1.5"></i>Cetak Harian
-        </button>
-        <button @click="triggerPrint('bulanan')" class="btn btn-primary-custom d-flex align-items-center py-2 px-3">
-          <i class="bi bi-file-earmark-bar-graph-fill me-1.5"></i>Cetak Bulanan
-        </button>
+      <div class="d-flex gap-3 align-items-center flex-wrap">
+        <!-- Month Filter Calendar Month Picker -->
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small fw-semibold text-nowrap">
+            <i class="bi bi-calendar-range-fill text-primary"></i> Pilih Bulan:
+          </span>
+          <div class="position-relative d-flex align-items-center">
+            <input 
+              type="month" 
+              v-model="filterMonth" 
+              class="form-control form-control-sm border-secondary-subtle rounded-3 shadow-xs" 
+              style="width: 175px; height: 38px; font-weight: 500; font-size: 0.85rem; padding-right: 32px;"
+            />
+            <button 
+              v-if="filterMonth" 
+              @click="filterMonth = ''" 
+              class="btn btn-link btn-sm text-secondary position-absolute end-0 me-2.5 p-0 border-0 d-flex align-items-center justify-content-center" 
+              style="height: 24px; width: 24px; top: 7px; text-decoration: none;"
+              title="Semua Bulan"
+            >
+              <i class="bi bi-x-circle-fill fs-6 text-muted"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button @click="triggerPrint('harian')" class="btn btn-outline-primary-custom d-flex align-items-center py-2 px-3">
+            <i class="bi bi-printer-fill me-1.5"></i>Cetak Harian
+          </button>
+          <button @click="triggerPrint('bulanan')" class="btn btn-primary-custom d-flex align-items-center py-2 px-3">
+            <i class="bi bi-file-earmark-bar-graph-fill me-1.5"></i>Cetak Bulanan
+          </button>
+        </div>
       </div>
     </div>
 
@@ -679,7 +826,7 @@ const successToastMsg = ref('')
                   LAPORAN PENJUALAN {{ printType === 'harian' ? 'HARIAN' : 'BULANAN' }}
                 </h5>
                 <p class="text-muted small" style="font-size: 0.78rem;">
-                  Periode: {{ printType === 'harian' ? '16 Juni 2026' : 'Juni 2026' }}
+                  Periode: {{ printType === 'harian' ? getTodayDateIndonesian() : currentFilteredMonthLabel }}
                 </p>
               </div>
 
@@ -687,21 +834,27 @@ const successToastMsg = ref('')
               <div class="row g-3 mb-4.5 border-bottom pb-4">
                 <div class="col-6">
                   <div class="small text-muted mb-0.5">Total Omset Pendapatan</div>
-                  <div class="fw-bold" style="font-size: 1.15rem; color: #16a34a;">{{ formatRupiah(totalRevenue) }}</div>
+                  <div class="fw-bold" style="font-size: 1.15rem; color: #16a34a;">
+                    {{ formatRupiah(printType === 'harian' ? todayRevenueOnly : totalRevenue) }}
+                  </div>
                 </div>
                 <div v-if="isOwner" class="col-6">
                   <div class="small text-muted mb-0.5">Total HPP (Harga Pokok)</div>
-                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ formatRupiah(totalCogs) }}</div>
+                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">
+                    {{ formatRupiah(printType === 'harian' ? todayCogsOnly : totalCogs) }}
+                  </div>
                 </div>
                 <div v-if="isOwner" class="col-6 mt-3">
                   <div class="small text-muted mb-0.5">Keuntungan / Kerugian Bersih</div>
-                  <div class="fw-bold" :style="{ fontSize: '1.15rem', color: netProfit >= 0 ? '#16a34a' : '#dc2626' }">
-                    {{ netProfit >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{ formatRupiah(Math.abs(netProfit)) }}
+                  <div class="fw-bold" :style="{ fontSize: '1.15rem', color: (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? '#16a34a' : '#dc2626' }">
+                    {{ (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{ formatRupiah(Math.abs(printType === 'harian' ? todayNetProfitOnly : netProfit)) }}
                   </div>
                 </div>
                 <div class="col-6" :class="{ 'mt-3': isOwner }">
                   <div class="small text-muted mb-0.5">Total Transaksi Selesai</div>
-                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">{{ totalTransactionsCount }} Transaksi</div>
+                  <div class="fw-bold text-dark" style="font-size: 1.15rem;">
+                    {{ printType === 'harian' ? todayTransactionsCountOnly : totalTransactionsCount }} Transaksi
+                  </div>
                 </div>
               </div>
 
@@ -721,7 +874,7 @@ const successToastMsg = ref('')
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="tx in transactionsList" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
+                    <tr v-for="tx in (printType === 'harian' ? todayTransactionsOnly : transactionsList)" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
                       <td class="py-2 px-2 font-monospace text-secondary">#TX-{{ tx.id }}</td>
                       <td class="py-2 px-2">{{ tx.time }}</td>
                       <td class="py-2 px-2 text-dark">{{ tx.cashierName || 'System' }}</td>
