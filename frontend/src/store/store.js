@@ -187,6 +187,7 @@ export const state = reactive({
   printerPairedName: loadState('toko_alin_printer_paired_name', ''),
   salesTarget: loadState('toko_alin_sales_target', 3000000),
   searchQuery: '',
+  broadcastDraft: '',
   notifications: loadState('toko_alin_notifications', [])
 })
 

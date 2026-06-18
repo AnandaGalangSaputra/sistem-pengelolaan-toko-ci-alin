@@ -23,6 +23,15 @@ const broadcastProgress = ref(0)
 const showPairModal = ref(false)
 
 const activeTab = ref('broadcast')
+
+// Watch for incoming broadcast message drafts from AI Assistant
+watch(() => state.broadcastDraft, (newVal) => {
+  if (newVal) {
+    broadcastMessage.value = newVal
+    selectedTemplateId.value = 'custom'
+    state.broadcastDraft = '' // reset draft in store after applying
+  }
+}, { immediate: true })
 const newCustName = ref('')
 const newCustPhone = ref('')
 const newCustType = ref('Reguler')

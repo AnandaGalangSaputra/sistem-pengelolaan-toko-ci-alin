@@ -89,7 +89,7 @@
                     <div v-else class="chat-panel d-flex flex-column flex-fill overflow-hidden">
                         
                         <!-- Scrollable Message List -->
-                        <div ref="messageContainer" class="messages-list flex-fill p-3 scrollable-container">
+                        <div ref="messageContainer" class="messages-list flex-fill p-3 scrollable-container" @click="handleChatClick">
                             
                             <!-- Initial Welcome State -->
                             <div v-if="messages.length === 0" class="welcome-container text-center py-4 px-3 my-auto d-flex flex-column align-items-center">
@@ -199,7 +199,10 @@
 
 <script setup>
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { state } from '../../store/store.js'
+import { state, restockProduct } from '../../store/store.js'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const props = defineProps({
     show: Boolean
@@ -222,7 +225,7 @@ const messages = ref([])
 const suggestions = [
     { title: '📦 List stok kritis / menipis', prompt: 'Tolong beri tahu barang apa saja yang stoknya di bawah batas minimal (kritis/menipis)? Cantumkan nama barang, stok saat ini, batas limit, status, dan raknya.' },
     { title: '🔍 Cari lokasi rak barang', prompt: 'Saya mau cari barang. Tolong sebutkan daftar barang beserta lokasi rak-nya agar mudah ditemukan!' },
-    { title: '📊 Analisis penjualan hari ini', prompt: 'Tolong berikan analisis ringkasan transaksi terbaru. Berapa total transaksi, rata-rata belanja, diskon yang diberikan, dan barang apa saja yang paling laris dari data tersebut?' },
+    { title: '💰 Keuntungan & Laporan Bulan Ini', prompt: 'Berapa total omset (penjualan) dan keuntungan bersih/laba toko kita untuk bulan ini?' },
     { title: '💬 Draf promo WhatsApp', prompt: 'Tolong buatkan draf pesan broadcast promosi WhatsApp yang menarik untuk salah satu produk di toko yang stoknya cukup. Buat agar pembeli tertarik membeli!' }
 ]
 
@@ -284,6 +287,54 @@ const handleEnterKey = (e) => {
     }
 }
 
+const handleRestockAction = async (productId, name) => {
+    const qty = prompt(`Masukkan jumlah barang masuk untuk "${name}" (ID: ${productId}):`)
+    if (qty === null) return
+    const amount = Number(qty)
+    if (isNaN(amount) || amount <= 0) {
+        alert('Jumlah restok harus berupa angka positif!')
+        return
+    }
+    
+    isLoading.value = true
+    try {
+        const success = await restockProduct(productId, amount)
+        if (success) {
+            messages.value.push({
+                role: 'model',
+                text: `✅ **Sistem**: Berhasil melakukan restok untuk barang **${name}** (ID: ${productId}) sebanyak **${amount}** unit. Stok baru telah diperbarui.`
+            })
+        }
+    } catch (e) {
+        console.error(e)
+        alert('Gagal melakukan restok barang!')
+    } finally {
+        isLoading.value = false
+        scrollToBottom()
+    }
+}
+
+const handleChatClick = (e) => {
+    const btn = e.target.closest('[data-action]')
+    if (!btn) return
+
+    const action = btn.getAttribute('data-action')
+    const target = btn.getAttribute('data-target')
+    const id = btn.getAttribute('data-id')
+    const extra = btn.getAttribute('data-extra')
+
+    if (action === 'nav') {
+        router.push(target)
+        emit('close')
+    } else if (action === 'restock') {
+        handleRestockAction(Number(id), extra)
+    } else if (action === 'wadraft') {
+        state.broadcastDraft = extra
+        router.push('/dashboard-karyawan/broadcast')
+        emit('close')
+    }
+}
+
 // Scroll chat to bottom
 const scrollToBottom = () => {
     nextTick(() => {
@@ -304,6 +355,81 @@ watch(() => props.show, (newVal) => {
 watch(messages, (newVal) => {
     sessionStorage.setItem('toko_alin_gemini_chat', JSON.stringify(newVal))
 }, { deep: true })
+
+// Helper to calculate total financial statistics from all transactions
+const financialStats = computed(() => {
+    const now = new Date()
+    const todayStr = now.toDateString()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    let salesToday = 0
+    let profitToday = 0
+    let cogsToday = 0
+    let salesThisMonth = 0
+    let profitThisMonth = 0
+    let cogsThisMonth = 0
+    let salesThisYear = 0
+    let profitThisYear = 0
+    let cogsThisYear = 0
+
+    // Monthly breakdown for current year
+    const monthlyStats = {}
+
+    state.transactions.forEach(t => {
+        const tDate = new Date(t.date)
+        const tYear = tDate.getFullYear()
+        const tMonth = tDate.getMonth()
+        
+        let totalCOGS = 0
+        if (t.details) {
+            t.details.forEach(d => {
+                const hargaBeli = d.barang ? Number(d.barang.harga_beli) : 0
+                totalCOGS += hargaBeli * d.qty
+            })
+        }
+        
+        // Profit = revenue (t.total is grand_total) - HPP (totalCOGS)
+        const tProfit = t.total - totalCOGS
+
+        // Today
+        if (tDate.toDateString() === todayStr) {
+            salesToday += t.total
+            cogsToday += totalCOGS
+            profitToday += tProfit
+        }
+
+        // This Month
+        if (tYear === currentYear && tMonth === currentMonth) {
+            salesThisMonth += t.total
+            cogsThisMonth += totalCOGS
+            profitThisMonth += tProfit
+        }
+
+        // This Year
+        if (tYear === currentYear) {
+            salesThisYear += t.total
+            cogsThisYear += totalCOGS
+            profitThisYear += tProfit
+
+            // Monthly breakdown
+            const monthKey = tDate.toLocaleDateString('id-ID', { month: 'long' })
+            if (!monthlyStats[monthKey]) {
+                monthlyStats[monthKey] = { sales: 0, cogs: 0, profit: 0 }
+            }
+            monthlyStats[monthKey].sales += t.total
+            monthlyStats[monthKey].cogs += totalCOGS
+            monthlyStats[monthKey].profit += tProfit
+        }
+    })
+
+    return {
+        today: { sales: salesToday, cogs: cogsToday, profit: profitToday },
+        thisMonth: { sales: salesThisMonth, cogs: cogsThisMonth, profit: profitThisMonth },
+        thisYear: { sales: salesThisYear, cogs: cogsThisYear, profit: profitThisYear },
+        monthlyBreakdown: monthlyStats
+    }
+})
 
 // Helper to construct POS Context for Gemini systemInstruction
 const systemContext = computed(() => {
@@ -327,6 +453,24 @@ const systemContext = computed(() => {
         `- Trx #${t.kode_transaksi || t.id} | Total: Rp${t.total.toLocaleString('id-ID')} (Diskon: Rp${t.discount.toLocaleString('id-ID')}) | Kasir: ${t.cashierName} | Pelanggan: ${t.customer?.name || 'Umum'} | Item: ${t.details ? t.details.map(d => `${d.barang?.name || 'Barang'} (x${d.qty})`).join(', ') : '-'}`
     ).join('\n')
 
+    // 5. Financial Stats Context
+    const stats = financialStats.value
+    const currentMonthName = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+    
+    let monthlyBreakdownStr = ''
+    Object.keys(stats.monthlyBreakdown).forEach(m => {
+        const item = stats.monthlyBreakdown[m]
+        monthlyBreakdownStr += `- ${m}: Omset Rp${item.sales.toLocaleString('id-ID')} | HPP Rp${item.cogs.toLocaleString('id-ID')} | Laba/Keuntungan Rp${item.profit.toLocaleString('id-ID')}\n`
+    })
+
+    const financialContext = `
+- HARI INI: Omset Penjualan Rp${stats.today.sales.toLocaleString('id-ID')} | Modal/HPP Rp${stats.today.cogs.toLocaleString('id-ID')} | Keuntungan Bersih Rp${stats.today.profit.toLocaleString('id-ID')}
+- BULAN INI (${currentMonthName}): Omset Penjualan Rp${stats.thisMonth.sales.toLocaleString('id-ID')} | Modal/HPP Rp${stats.thisMonth.cogs.toLocaleString('id-ID')} | Keuntungan Bersih/Laba Rp${stats.thisMonth.profit.toLocaleString('id-ID')}
+- TAHUN INI (${new Date().getFullYear()}): Omset Penjualan Rp${stats.thisYear.sales.toLocaleString('id-ID')} | Modal/HPP Rp${stats.thisYear.cogs.toLocaleString('id-ID')} | Keuntungan Bersih/Laba Rp${stats.thisYear.profit.toLocaleString('id-ID')}
+- RINCIAN BULANAN TAHUN INI:
+${monthlyBreakdownStr || '- Belum ada data bulanan untuk tahun ini.'}
+`
+
     return `Anda adalah 'Asisten AI Toko Ce Alin', asisten pintar terintegrasi dengan sistem Point of Sale (POS) Toko Parabot & Sparepart Ce Alin.
 Tugas utama Anda adalah membantu kasir dan pemilik toko dalam menjawab pertanyaan, menganalisis stok atau penjualan, dan membuat draf pesan promosi.
 
@@ -340,15 +484,32 @@ ${racksList || 'Tidak ada data rak saat ini.'}
 [PELANGGAN TERDAFTAR]
 ${customersList || 'Tidak ada data pelanggan saat ini.'}
 
+[RINGKASAN LAPORAN KEUANGAN & LABA-RUGI TOKO]
+${financialContext}
+
 [TRANSAKSI TERBARU (Maksimal 10 Trx Terakhir)]
 ${transactionsList || 'Tidak ada riwayat transaksi hari ini.'}
 
+FORMAT TOMBOL INTERAKTIF:
+Anda dapat menyisipkan tombol tindakan interaktif yang dapat diklik oleh pengguna menggunakan format teks khusus berikut (sisipkan di bagian bawah jawaban Anda jika relevan):
+1. Tombol Navigasi Menu: [NAV:Nama Tombol:Rute]
+   Contoh:
+   - Ke menu Kasir: [NAV:Buka Menu Kasir:/dashboard-karyawan/kasir]
+   - Ke Data Barang: [NAV:Buka Data Barang:/dashboard-karyawan/data-barang]
+   - Ke Daftar Rak: [NAV:Buka Daftar Rak:/dashboard-karyawan/daftar-rak]
+   - Ke Laporan Transaksi: [NAV:Buka Laporan Transaksi:/dashboard-karyawan/laporan]
+2. Tombol Restok Cepat: [RESTOCK:Nama Tombol:ID_Barang:Nama_Barang]
+   Contoh: Jika stok Bearing 6204 NSK (ID: 1) menipis/kritis, tawarkan tombol: [RESTOCK:Restok Bearing 6204 NSK:1:Bearing 6204 NSK]
+3. Tombol Terapkan Promo WA: [WADRAFT:Nama Tombol:Isi_Teks_Draft_Promosi]
+   Contoh: Jika Anda membuat draf promosi, selalu tawarkan tombol untuk menyalinnya ke menu broadcast: [WADRAFT:Gunakan Draft WA:Halo Pelanggan Setia! Toko Ce Alin menyediakan...]
+
 PANDUAN MENJAWAB:
-1. Jika pengguna bertanya tentang barang kritis/menipis, sebutkan produk yang memiliki status "Kritis" atau "Menipis" secara terperinci (Nama, stok saat ini, rak, dan harga).
-2. Jika pengguna mencari lokasi barang, sebutkan di Rak mana barang tersebut disimpan berdasarkan data [PRODUK TOKO] di atas.
-3. Jika ditanya mengenai analisis transaksi terbaru, buatkan ringkasan yang menarik berdasarkan data [TRANSAKSI TERBARU].
-4. Jika diminta draf pesan promosi WhatsApp, gunakan detail produk dari data toko (nama, harga) dan sesuaikan dengan format template WhatsApp yang ramah, sopan, persuasif, dan mencantumkan nama toko "Toko Parabot & Sparepart Ce Alin".
-5. Gunakan bahasa Indonesia yang santun, profesional, ringkas, dan langsung menjawab inti pertanyaan. Jangan mengarang data di luar data toko yang disediakan di atas!`
+1. Jika pengguna bertanya tentang barang kritis/menipis, sebutkan produk yang memiliki status "Kritis" atau "Menipis" secara terperinci (Nama, stok saat ini, rak, dan harga). Serta berikan tombol [RESTOCK:Restok Nama_Barang:ID_Barang:Nama_Barang] di sampingnya.
+2. Jika pengguna mencari lokasi barang, sebutkan di Rak mana barang tersebut disimpan berdasarkan data [PRODUK TOKO] di atas. Tawarkan tombol navigasi ke [NAV:Buka Daftar Rak:/dashboard-karyawan/daftar-rak] jika relevan.
+3. Jika ditanya mengenai analisis transaksi terbaru, buatkan ringkasan yang menarik berdasarkan data [TRANSAKSI TERBARU], dan tawarkan tombol [NAV:Buka Laporan Transaksi:/dashboard-karyawan/laporan].
+4. Jika diminta draf pesan promosi WhatsApp, gunakan detail produk dari data toko (nama, harga) dan sesuaikan dengan format template WhatsApp yang ramah, sopan, persuasif, dan mencantumkan nama toko "Toko Parabot & Sparepart Ce Alin". Selalu sertakan tombol [WADRAFT:Kirim via WA Broadcast:Isi_Pesan_Draft_Di_Sini] agar pengguna bisa langsung menyalin dan menggunakannya.
+5. Jika pengguna bertanya tentang laporan keuangan toko, total omset/penjualan, HPP (beban modal pokok penjualan), atau keuntungan bersih (laba bersih/profit), gunakan data pada bagian [RINGKASAN LAPORAN KEUANGAN & LABA-RUGI TOKO] di atas untuk menjawab. Jelaskan secara rinci dan tampilkan data omset, HPP, serta keuntungan dengan format mata uang Rupiah secara tepat.
+6. Gunakan bahasa Indonesia yang santun, profesional, ringkas, dan langsung menjawab inti pertanyaan. Jangan mengarang data di luar data toko yang disediakan di atas!`
 })
 
 // Send Message logic
@@ -443,6 +604,23 @@ const renderMarkdown = (text) => {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
 
+    // Parse Interactive Buttons before parsing paragraphs/lines, so they don't get wrapped in other selectors unexpectedly
+    // 1. NAV Button: [NAV:ButtonName:Route]
+    escaped = escaped.replace(/\[NAV:(.*?):(.*?)\]/g, (match, name, route) => {
+        return `<button class="btn btn-sm btn-action-trigger-outline d-inline-flex align-items-center gap-1" data-action="nav" data-target="${route}"><i class="bi bi-box-arrow-in-right"></i> ${name}</button>`
+    })
+
+    // 2. RESTOCK Button: [RESTOCK:ButtonName:Id:ProductName]
+    escaped = escaped.replace(/\[RESTOCK:(.*?):(.*?):(.*?)\]/g, (match, name, id, prodName) => {
+        return `<button class="btn btn-sm btn-action-trigger d-inline-flex align-items-center gap-1" data-action="restock" data-id="${id}" data-extra="${prodName}"><i class="bi bi-plus-circle-fill"></i> ${name}</button>`
+    })
+
+    // 3. WADRAFT Button: [WADRAFT:ButtonName:Message]
+    escaped = escaped.replace(/\[WADRAFT:(.*?):([\s\S]*?)\]/g, (match, name, msg) => {
+        const cleanMsg = msg.replace(/"/g, '&quot;')
+        return `<button class="btn btn-sm btn-action-trigger d-inline-flex align-items-center gap-1" data-action="wadraft" data-extra="${cleanMsg}"><i class="bi bi-whatsapp"></i> ${name}</button>`
+    })
+
     const lines = escaped.split('\n')
     let inList = false
     let parsedLines = []
@@ -484,7 +662,13 @@ const renderMarkdown = (text) => {
                 parsedLines.push('</ul>')
                 inList = false
             }
-            parsedLines.push(`<p class="mb-2" style="font-size: 0.82rem; line-height: 1.5; margin-bottom: 0.5rem;">${line}</p>`)
+            
+            // If the line contains a raw button (not text), let's render it directly without wrapping in <p>
+            if (trimmed.startsWith('<button')) {
+                parsedLines.push(line)
+            } else {
+                parsedLines.push(`<p class="mb-2" style="font-size: 0.82rem; line-height: 1.5; margin-bottom: 0.5rem;">${line}</p>`)
+            }
         }
     }
     
@@ -742,5 +926,44 @@ const renderMarkdown = (text) => {
         transform: scale(1.0);
         opacity: 1;
     }
+}
+
+/* AI Interactive Action Buttons styles */
+.btn-action-trigger {
+    margin: 4px 6px 4px 0;
+    padding: 6px 12px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white !important;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.18);
+    cursor: pointer;
+}
+
+.btn-action-trigger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.28);
+    opacity: 0.95;
+}
+
+.btn-action-trigger-outline {
+    margin: 4px 6px 4px 0;
+    padding: 6px 12px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1.5px solid #7c3aed;
+    background: white;
+    color: #7c3aed !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-action-trigger-outline:hover {
+    background-color: #f5f3ff;
+    transform: translateY(-1px);
 }
 </style>
