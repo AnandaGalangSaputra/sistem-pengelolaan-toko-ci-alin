@@ -130,9 +130,13 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
         console.log("Disconnecting WhatsApp...");
         if (sock) {
             try {
-                await sock.logout();
+                // Memberikan batas waktu (timeout) 3 detik agar tidak menggantung
+                await Promise.race([
+                    sock.logout(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 3000))
+                ]);
             } catch (err) {
-                console.error("Error during logout:", err);
+                console.error("Error/Timeout during logout:", err.message);
                 try {
                     sock.end();
                 } catch (e) {}
