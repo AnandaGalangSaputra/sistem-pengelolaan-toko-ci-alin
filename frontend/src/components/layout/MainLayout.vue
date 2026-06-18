@@ -8,6 +8,17 @@ import { state, logoutUser, fetchProducts, fetchRacks, fetchTransactions, fetchC
 const router = useRouter()
 const route = useRoute()
 
+const isSidebarCollapsed = ref(false)
+const isMobileSidebarOpen = ref(false)
+
+const toggleSidebar = () => {
+  if (window.innerWidth < 992) {
+    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
+  } else {
+    isSidebarCollapsed.value = !isSidebarCollapsed.value
+  }
+}
+
 onMounted(() => {
   if (state.currentUser) {
     fetchProducts()
@@ -53,6 +64,7 @@ const sidebarMenu = computed(() => {
 })
 
 const changeMenu = (menuId) => {
+  isMobileSidebarOpen.value = false
   if (menuId === 'dashboard') router.push('/dashboard-karyawan')
   else if (menuId === 'data-barang') router.push('/dashboard-karyawan/data-barang')
   else if (menuId === 'stok-barang') router.push('/dashboard-karyawan/stok-barang')
@@ -65,13 +77,14 @@ const changeMenu = (menuId) => {
 }
 
 const handleLogout = async () => {
+  isMobileSidebarOpen.value = false
   await logoutUser()
   router.push('/login')
 }
 </script>
 
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container" :class="{ 'sidebar-collapsed': isSidebarCollapsed, 'mobile-sidebar-open': isMobileSidebarOpen }">
     <Sidebar 
       :employee-name="employeeName" 
       :employee-role="employeeRole" 
@@ -79,12 +92,16 @@ const handleLogout = async () => {
       @change-menu="changeMenu" 
       @logout="handleLogout" 
     />
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div v-if="isMobileSidebarOpen" class="sidebar-backdrop" @click="isMobileSidebarOpen = false"></div>
+
     <!-- Main Content Area -->
     <div class="main-layout">
       <TopHeader 
         v-model:searchQuery="state.searchQuery" 
         :low-stock-count="lowStockCount" 
         @logout="handleLogout" 
+        @toggle-sidebar="toggleSidebar"
       />
       <!-- Page Content -->
       <router-view />

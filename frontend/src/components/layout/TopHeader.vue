@@ -1,11 +1,17 @@
 <template>
     <!-- Top Header -->
     <header class="top-header-main">
-        <div class="header-search">
-            <i class="bi bi-search search-icon"></i>
-            <input type="text" placeholder="Cari nama barang atau lokasi rak..." class="search-input"
-                :value="searchQuery" @input="$emit('update:searchQuery', $event.target.value)" />
-            <button class="btn-search">Cari</button>
+        <div class="d-flex align-items-center flex-fill me-3" style="max-width: 480px;">
+            <!-- Toggle Sidebar Button -->
+            <button @click="$emit('toggle-sidebar')" class="btn-toggle-sidebar me-2" type="button" aria-label="Toggle Sidebar">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="header-search flex-fill">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" placeholder="Cari nama barang atau lokasi rak..." class="search-input"
+                    :value="searchQuery" @input="$emit('update:searchQuery', $event.target.value)" />
+                <button class="btn-search">Cari</button>
+            </div>
         </div>
 
         <div class="header-right">
@@ -103,7 +109,8 @@ defineProps({
 
 defineEmits([
     'update:searchQuery',
-    'logout'
+    'logout',
+    'toggle-sidebar'
 ])
 
 const timeString = ref('')
@@ -193,6 +200,27 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.btn-toggle-sidebar {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-toggle-sidebar:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
 .ai-chat-trigger-btn {
     background: transparent;
     border: none;

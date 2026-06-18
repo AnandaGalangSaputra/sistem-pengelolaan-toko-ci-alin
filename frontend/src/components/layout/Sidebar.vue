@@ -10,7 +10,7 @@ defineEmits(['change-menu', 'logout'])
 
 <template>
     <!-- Sidebar -->
-    <aside class="sidebar d-none d-lg-flex">
+    <aside class="sidebar">
         <div class="sidebar-brand">
             <img src="../../assets/Asset 7.svg" alt="Toko Ce Alin" class="brand-logo" />
             <div class="brand-text">

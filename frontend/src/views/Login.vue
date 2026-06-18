@@ -11,6 +11,7 @@ const username = ref('owner')
 const password = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const isLoggingIn = ref(false)
 
 // Database empty check states
 const isDbEmpty = ref(false)
@@ -47,15 +48,23 @@ const handleLogin = async () => {
     return
   }
 
-  const result = await loginUser(username.value, password.value)
+  isLoggingIn.value = true
+  try {
+    const result = await loginUser(username.value, password.value)
 
-  if (result.success) {
-    successMessage.value = `Login berhasil sebagai ${result.user.role === 'owner' ? 'Owner' : 'Karyawan'}!`
-    setTimeout(() => {
-      router.push('/dashboard-karyawan')
-    }, 1000)
-  } else {
-    errorMessage.value = result.message
+    if (result.success) {
+      successMessage.value = `Login berhasil sebagai ${result.user.role === 'owner' ? 'Owner' : 'Karyawan'}!`
+      setTimeout(() => {
+        router.push('/dashboard-karyawan')
+      }, 1000)
+    } else {
+      errorMessage.value = result.message
+    }
+  } catch (err) {
+    console.error('Login error:', err)
+    errorMessage.value = 'Terjadi kesalahan jaringan saat mencoba masuk.'
+  } finally {
+    isLoggingIn.value = false
   }
 }
 
@@ -205,7 +214,8 @@ const handleRegisterOwner = async () => {
               </div>
 
               <!-- Submit Button -->
-              <button type="submit" class="btn-submit" id="btn-login-submit">
+              <button type="submit" :disabled="isLoggingIn" class="btn-submit" id="btn-login-submit">
+                <span v-if="isLoggingIn" class="spinner-border spinner-border-sm me-1.5" role="status" aria-hidden="true"></span>
                 Masuk
               </button>
 
