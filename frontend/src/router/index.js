@@ -77,10 +77,9 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
-
 router.beforeEach((to, from, next) => {
   const isLoggedIn = state.currentUser && state.currentUser.username
-  
+
   if (to.name !== 'Login' && !isLoggedIn) {
     next({ name: 'Login' })
   } else if (to.name === 'Login' && isLoggedIn) {

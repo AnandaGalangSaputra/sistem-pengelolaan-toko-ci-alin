@@ -171,7 +171,7 @@ onUnmounted(() => {
 // Start polling Midtrans status with sequential setTimeout to avoid race conditions
 const startQrisPolling = (orderId) => {
   stopQrisPolling()
-  
+
   const poll = async () => {
     // Check if we are still waiting for this QRIS payment
     if (paymentMethod.value !== 'QRIS' || qrisOrderId.value !== orderId || qrisStatus.value !== 'pending') {
@@ -183,7 +183,7 @@ const startQrisPolling = (orderId) => {
         credentials: 'include'
       })
       const data = await res.json()
-      
+
       // Double check state after request returns to ensure it hasn't changed
       if (paymentMethod.value !== 'QRIS' || qrisOrderId.value !== orderId || qrisStatus.value !== 'pending') {
         return
@@ -535,7 +535,7 @@ const formatReceiptMessage = (tx) => {
   const shopAddress = getShopAddress()
   const shopWa = getShopWa()
   const footer = getShopReceiptFooter()
-  
+
   let msg = `*${shopName.toUpperCase()}*\n`
   msg += `${shopAddress}\n`
   msg += `Telp/WA: ${shopWa}\n`
@@ -546,12 +546,12 @@ const formatReceiptMessage = (tx) => {
   msg += `Pelanggan: ${tx.customerName}\n`
   msg += `----------------------------------------\n`
   msg += `*Rincian Belanja:*\n\n`
-  
+
   tx.items.forEach(item => {
     msg += `- ${item.product.name}\n`
     msg += `  ${item.quantity} x ${formatRupiah(item.product.price)} = ${formatRupiah(item.product.price * item.quantity)}\n\n`
   })
-  
+
   msg += `----------------------------------------\n`
   msg += `Subtotal: ${formatRupiah(tx.subtotal)}\n`
   if (tx.discount > 0) {
@@ -564,7 +564,7 @@ const formatReceiptMessage = (tx) => {
   }
   msg += `----------------------------------------\n`
   msg += `${footer}`
-  
+
   return msg
 }
 
@@ -788,7 +788,7 @@ const sendWaReceipt = async () => {
 
                 <div class="text-end" style="width: 90px;">
                   <span class="fw-bold text-primary small d-block">{{ formatRupiah(item.product.price * item.quantity)
-                    }}</span>
+                  }}</span>
                 </div>
 
                 <button @click="removeFromCart(item)" class="btn btn-sm text-danger border-0 p-1 ms-2">
@@ -1194,24 +1194,17 @@ const sendWaReceipt = async () => {
               <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-1.5" style="font-size: 0.85rem;">
                 <i class="bi bi-whatsapp text-success fs-5"></i>Kirim Struk via WhatsApp
               </h5>
-              <p class="text-muted mb-2.5" style="font-size: 0.72rem;">Kirim rincian nota belanja ini langsung ke nomor WhatsApp pelanggan.</p>
-              
+              <p class="text-muted mb-2.5" style="font-size: 0.72rem;">Kirim rincian nota belanja ini langsung ke nomor
+                WhatsApp pelanggan.</p>
+
               <div class="d-flex gap-2">
-                <input 
-                  type="text" 
-                  v-model="waNumberInput" 
-                  class="form-control-style py-1.5 px-3" 
-                  placeholder="Contoh: 08123456789" 
-                  style="font-size: 0.8rem; height: 36px;"
-                  :disabled="isSendingWa"
-                />
-                <button 
-                  @click="sendWaReceipt" 
-                  :disabled="isSendingWa || !waNumberInput" 
-                  class="btn btn-sm btn-success d-flex align-items-center justify-content-center gap-1 fw-bold border-0 px-3" 
-                  style="background-color: #25d366; color: white; font-size: 0.8rem; height: 36px; border-radius: 8px;"
-                >
-                  <span v-if="isSendingWa" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>
+                <input type="text" v-model="waNumberInput" class="form-control-style py-1.5 px-3"
+                  placeholder="Contoh: 08123456789" style="font-size: 0.8rem; height: 36px;" :disabled="isSendingWa" />
+                <button @click="sendWaReceipt" :disabled="isSendingWa || !waNumberInput"
+                  class="btn btn-sm btn-success d-flex align-items-center justify-content-center gap-1 fw-bold border-0 px-3"
+                  style="background-color: #25d366; color: white; font-size: 0.8rem; height: 36px; border-radius: 8px;">
+                  <span v-if="isSendingWa" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                    style="width: 14px; height: 14px;"></span>
                   <span v-else>Kirim</span>
                 </button>
               </div>
