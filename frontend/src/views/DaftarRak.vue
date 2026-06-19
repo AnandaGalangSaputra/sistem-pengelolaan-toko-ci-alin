@@ -21,6 +21,9 @@ const showEditModal = ref(false)
 const formNamaRak = ref('')
 const formKeterangan = ref('')
 const formColor = ref('#3b82f6')
+const formBaris = ref('1')
+const formLebar = ref(1)
+const formTinggi = ref(1)
 
 const presetColors = [
   { name: 'Biru', hex: '#3b82f6' },
@@ -122,10 +125,32 @@ const triggerToast = (msg) => {
 // GRID LAYOUT SETTING
 const gridColumns = ref(Number(localStorage.getItem('toko_alin_grid_columns') || 6))
 
-const gridClass = computed(() => {
-  if (gridColumns.value === 2) return 'denah-flex-container layout-vertikal'
-  if (gridColumns.value === 4) return 'denah-flex-container layout-kotak'
-  return 'denah-flex-container layout-horizontal'
+const gridClass = computed(() => 'denah-grid-container')
+
+// Group racks by row name (baris) for physical layout mapping
+const groupedRacks = computed(() => {
+  const groups = {}
+  state.racks.forEach(rak => {
+    const r = rak.baris || '1'
+    if (!groups[r]) {
+      groups[r] = []
+    }
+    groups[r].push(rak)
+  })
+  
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const numA = Number(a)
+    const numB = Number(b)
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numA - numB
+    }
+    return a.localeCompare(b)
+  })
+  
+  return sortedKeys.map(key => ({
+    rowName: key,
+    racks: groups[key] // Preserve order from state.racks
+  }))
 })
 
 const changeGridColumns = (cols) => {
@@ -133,12 +158,23 @@ const changeGridColumns = (cols) => {
   localStorage.setItem('toko_alin_grid_columns', cols)
 }
 
+const onGridColumnsChange = () => {
+  if (typeof gridColumns.value !== 'number' || isNaN(gridColumns.value) || gridColumns.value < 1) {
+    gridColumns.value = 1
+  } else if (gridColumns.value > 16) {
+    gridColumns.value = 16
+  }
+  localStorage.setItem('toko_alin_grid_columns', gridColumns.value)
+}
+
 // DRAG AND DROP HANDLERS (HTML5 API)
 const draggedIndex = ref(null)
 
-const onDragStart = (event, index) => {
+const onDragStart = (event, rak) => {
   if (!isOwner.value) return
-  draggedIndex.value = index
+  const idx = state.racks.findIndex(r => r.id === rak.id)
+  if (idx === -1) return
+  draggedIndex.value = idx
   event.dataTransfer.effectAllowed = 'move'
 }
 
@@ -147,10 +183,12 @@ const onDragOver = (event) => {
   event.preventDefault()
 }
 
-const onDrop = (event, toIndex) => {
+const onDrop = (event, targetRak) => {
   event.preventDefault()
   if (!isOwner.value) return
-  if (draggedIndex.value === null || draggedIndex.value === toIndex) return
+  if (draggedIndex.value === null) return
+  const toIndex = state.racks.findIndex(r => r.id === targetRak.id)
+  if (toIndex === -1 || draggedIndex.value === toIndex) return
   
   // Reorder racks array
   const temp = [...state.racks]
@@ -183,6 +221,9 @@ const openAddModal = () => {
   formNamaRak.value = ''
   formKeterangan.value = ''
   formColor.value = '#3b82f6'
+  formBaris.value = '1'
+  formLebar.value = 1
+  formTinggi.value = 1
   showAddModal.value = true
 }
 
@@ -194,7 +235,14 @@ const submitAdd = async () => {
   
   isLoading.value = true
   try {
-    const result = await addRack(formNamaRak.value, formKeterangan.value, formColor.value)
+    const result = await addRack(
+      formNamaRak.value, 
+      formKeterangan.value, 
+      formColor.value,
+      formBaris.value,
+      formLebar.value,
+      formTinggi.value
+    )
     if (result.success) {
       showAddModal.value = false
       triggerToast(`Rak "${formNamaRak.value}" berhasil ditambahkan!`)
@@ -217,6 +265,9 @@ const openEditModal = () => {
   formNamaRak.value = selectedRack.value.nama_rak
   formKeterangan.value = selectedRack.value.keterangan || ''
   formColor.value = selectedRack.value.color || '#3b82f6'
+  formBaris.value = selectedRack.value.baris || '1'
+  formLebar.value = selectedRack.value.lebar || 1
+  formTinggi.value = selectedRack.value.tinggi || 1
   showEditModal.value = true
 }
 
@@ -229,7 +280,15 @@ const submitEdit = async () => {
   
   isLoading.value = true
   try {
-    const result = await editRack(selectedRack.value.id, formNamaRak.value, formKeterangan.value, formColor.value)
+    const result = await editRack(
+      selectedRack.value.id, 
+      formNamaRak.value, 
+      formKeterangan.value, 
+      formColor.value,
+      formBaris.value,
+      formLebar.value,
+      formTinggi.value
+    )
     if (result.success) {
       showEditModal.value = false
       triggerToast(`Rak "${formNamaRak.value}" berhasil diperbarui!`)
@@ -332,39 +391,75 @@ const viewProducts = () => {
           <span>Lihat Barang</span>
         </button>
 
-        <!-- Layout Grid Direction Button Group -->
-        <div v-if="isOwner" class="d-flex align-items-center gap-1 border bg-white rounded-3 p-1 shadow-sm" style="height: 38px;">
-          <span class="text-muted small px-2 fw-semibold" style="font-size: 0.72rem;">Bentuk Denah:</span>
-          <button 
-            @click="changeGridColumns(2)" 
-            class="btn btn-sm py-1 px-2 d-flex align-items-center gap-1 border-0 rounded-2"
-            :class="gridColumns === 2 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
-            style="font-size: 0.72rem; font-weight: 600;"
-            title="Memanjang ke Bawah (Vertikal 2 Kolom)"
-          >
-            <i class="bi bi-distribute-vertical"></i>
-            <span>Vertikal</span>
-          </button>
-          <button 
-            @click="changeGridColumns(4)" 
-            class="btn btn-sm py-1 px-2 d-flex align-items-center gap-1 border-0 rounded-2"
-            :class="gridColumns === 4 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
-            style="font-size: 0.72rem; font-weight: 600;"
-            title="Tata Letak Kotak (4 Kolom)"
-          >
-            <i class="bi bi-grid-2x2-gap"></i>
-            <span>Kotak</span>
-          </button>
-          <button 
-            @click="changeGridColumns(6)" 
-            class="btn btn-sm py-1 px-2 d-flex align-items-center gap-1 border-0 rounded-2"
-            :class="gridColumns === 6 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
-            style="font-size: 0.72rem; font-weight: 600;"
-            title="Memanjang ke Kanan (Horizontal 6 Kolom)"
-          >
-            <i class="bi bi-distribute-horizontal"></i>
-            <span>Horizontal</span>
-          </button>
+        <!-- Layout Grid Direction Button Group (Presets + Custom Stepper) -->
+        <div class="d-flex align-items-center gap-2 border bg-white rounded-3 p-1 px-2.5 shadow-sm flex-wrap" style="height: auto; min-height: 38px;">
+          <span class="text-muted small fw-semibold text-nowrap" style="font-size: 0.72rem;">Bentuk Denah:</span>
+          
+          <div class="btn-group btn-group-sm rounded-2 border" role="group">
+            <button 
+              type="button"
+              @click="changeGridColumns(2)" 
+              class="btn py-1 px-2 border-0"
+              :class="gridColumns === 2 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
+              style="font-size: 0.7rem; font-weight: 600;"
+              title="Vertikal 2 Kolom"
+            >
+              Vertikal (2)
+            </button>
+            <button 
+              type="button"
+              @click="changeGridColumns(4)" 
+              class="btn py-1 px-2 border-0"
+              :class="gridColumns === 4 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
+              style="font-size: 0.7rem; font-weight: 600;"
+              title="Kotak 4 Kolom"
+            >
+              Kotak (4)
+            </button>
+            <button 
+              type="button"
+              @click="changeGridColumns(6)" 
+              class="btn py-1 px-2 border-0"
+              :class="gridColumns === 6 ? 'btn-primary-custom shadow-sm' : 'btn-light text-muted'"
+              style="font-size: 0.7rem; font-weight: 600;"
+              title="Horizontal 6 Kolom"
+            >
+              Horizontal (6)
+            </button>
+          </div>
+
+          <div class="vr mx-1" style="height: 18px; align-self: center;"></div>
+
+          <div class="d-flex align-items-center gap-1.5">
+            <span class="text-muted text-nowrap" style="font-size: 0.68rem; font-weight: 500;">Kustom Kolom:</span>
+            <button 
+              type="button" 
+              @click="changeGridColumns(Math.max(1, gridColumns - 1))" 
+              class="btn btn-sm btn-light border d-flex align-items-center justify-content-center p-0 rounded-2" 
+              style="width: 22px; height: 22px;"
+              :disabled="gridColumns <= 1"
+            >
+              <i class="bi bi-dash" style="font-size: 0.75rem;"></i>
+            </button>
+            <input 
+              type="number" 
+              v-model.number="gridColumns" 
+              @input="onGridColumnsChange"
+              min="1" 
+              max="16" 
+              class="form-control form-control-sm text-center fw-bold p-0 border" 
+              style="width: 38px; height: 22px; font-size: 0.78rem; border-radius: 4px;"
+            />
+            <button 
+              type="button" 
+              @click="changeGridColumns(Math.min(16, gridColumns + 1))" 
+              class="btn btn-sm btn-light border d-flex align-items-center justify-content-center p-0 rounded-2" 
+              style="width: 22px; height: 22px;"
+              :disabled="gridColumns >= 16"
+            >
+              <i class="bi bi-plus" style="font-size: 0.75rem;"></i>
+            </button>
+          </div>
         </div>
 
         <button v-if="isOwner" @click="resetRackOrder" class="btn btn-light border py-2 px-3" title="Kembalikan urutan alfabetis" style="height: 38px;">
@@ -387,7 +482,7 @@ const viewProducts = () => {
     </div>
 
     <!-- Layout Grid: Floor Denah Map -->
-    <div class="denah-container card border shadow-sm p-4 rounded-4 bg-white">
+    <div class="denah-container card border shadow-sm p-4 rounded-4 bg-white" style="overflow-x: auto;">
       <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
         <div class="d-flex align-items-center gap-2">
           <i class="bi bi-map text-primary fs-5"></i>
@@ -399,58 +494,69 @@ const viewProducts = () => {
         </div>
       </div>
 
-      <!-- Compact custom flex layout denah wrapper instead of bootstrap row -->
-      <div :class="gridClass">
-        <!-- Render Rack Grid Box -->
-        <div 
-          v-for="(rak, index) in state.racks" 
-          :key="rak.id" 
-          class="rak-box-wrapper"
-          :class="{ 'dragging': draggedIndex === index }"
-          :draggable="isOwner"
-          @dragstart="onDragStart($event, index)"
-          @dragover="onDragOver($event)"
-          @drop="onDrop($event, index)"
-          @dragend="onDragEnd($event)"
-        >
-          <!-- Visual Rack Box with Dynamic Theme Color -->
+      <!-- Render each row/lane separately -->
+      <div v-for="row in groupedRacks" :key="row.rowName" class="baris-wrapper mb-4 pb-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-dark text-white px-2.5 py-1.5 rounded-3 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+            <i class="bi bi-justify"></i> BARIS / BLOK {{ row.rowName }}
+          </span>
+          <span class="text-muted small">({{ row.racks.length }} Rak)</span>
+        </div>
+
+        <!-- Compact custom grid layout denah wrapper -->
+        <div :class="gridClass" :style="{ '--grid-cols': gridColumns }">
+          <!-- Render Rack Grid Box -->
           <div 
-            @click="selectedRackId = (selectedRackId === rak.id ? null : rak.id)"
-            class="rak-denah-cell rounded-3 p-2 d-flex flex-column justify-content-between position-relative cursor-pointer"
-            :style="{ 
-              backgroundColor: getRackColor(rak).bg, 
-              borderColor: selectedRackId === rak.id ? getRackColor(rak).activeBorder : getRackColor(rak).border,
-              borderWidth: selectedRackId === rak.id ? '2px' : '1px',
-              color: getRackColor(rak).text,
-              boxShadow: selectedRackId === rak.id ? `0 0 0 3px ${getRackColor(rak).dot}28` : ''
-            }"
-            :class="{ 'active': selectedRackId === rak.id }"
+            v-for="rak in row.racks" 
+            :key="rak.id" 
+            class="rak-box-wrapper"
+            :style="{ '--lebar': rak.lebar || 1, '--tinggi': rak.tinggi || 1 }"
+            :class="{ 'dragging': draggedIndex === state.racks.findIndex(r => r.id === rak.id) }"
+            :draggable="isOwner"
+            @dragstart="onDragStart($event, rak)"
+            @dragover="onDragOver($event)"
+            @drop="onDrop($event, rak)"
+            @dragend="onDragEnd($event)"
           >
-            <!-- Top cell info row -->
-            <div class="d-flex justify-content-between align-items-center w-100" style="font-size: 0.65rem;">
-              <span v-if="isOwner" class="drag-handle text-muted" style="cursor: move;" @click.stop><i class="bi bi-grip-vertical"></i></span>
-              <span v-else style="width: 8px;"></span>
-              <span class="font-monospace fw-bold opacity-75">{{ getProductCount(rak.id) }} Unit</span>
-            </div>
+            <!-- Visual Rack Box with Dynamic Theme Color -->
+            <div 
+              @click="selectedRackId = (selectedRackId === rak.id ? null : rak.id)"
+              class="rak-denah-cell rounded-3 p-2 d-flex flex-column justify-content-between position-relative cursor-pointer"
+              :style="{ 
+                backgroundColor: getRackColor(rak).bg, 
+                borderColor: selectedRackId === rak.id ? getRackColor(rak).activeBorder : getRackColor(rak).border,
+                borderWidth: selectedRackId === rak.id ? '2px' : '1px',
+                color: getRackColor(rak).text,
+                boxShadow: selectedRackId === rak.id ? `0 0 0 3px ${getRackColor(rak).dot}28` : ''
+              }"
+              :class="{ 'active': selectedRackId === rak.id }"
+            >
+              <!-- Top cell info row -->
+              <div class="d-flex justify-content-between align-items-center w-100" style="font-size: 0.65rem;">
+                <span v-if="isOwner" class="drag-handle text-muted" style="cursor: move;" @click.stop><i class="bi bi-grip-vertical"></i></span>
+                <span v-else style="width: 8px;"></span>
+                <span class="font-monospace fw-bold opacity-75">{{ getProductCount(rak.id) }} Unit</span>
+              </div>
 
-            <!-- Abbreviation Display (Letters and Numbers) -->
-            <div class="text-center">
-              <span class="abbreviation-code block">
-                {{ getAbbreviation(rak.nama_rak) }}
-              </span>
-            </div>
+              <!-- Abbreviation Display (Letters and Numbers) -->
+              <div class="text-center">
+                <span class="abbreviation-code block">
+                  {{ getAbbreviation(rak.nama_rak) }}
+                </span>
+              </div>
 
-            <!-- Bottom cell name row -->
-            <div class="text-center w-100 border-top pt-1 text-truncate fw-semibold" style="opacity: 0.8; font-size: 0.62rem;">
-              {{ rak.nama_rak }}
+              <!-- Bottom cell name row -->
+              <div class="text-center w-100 border-top pt-1 text-truncate fw-semibold" style="opacity: 0.8; font-size: 0.62rem;">
+                {{ rak.nama_rak }}
+              </div>
+              
+              <!-- Selection Dot -->
+              <span 
+                v-if="selectedRackId === rak.id" 
+                class="position-absolute shadow-sm" 
+                style="width: 10px; height: 10px; border-radius: 50%; top: -3px; right: -3px; background-color: #2563eb; border: 1.5px solid #ffffff;"
+              ></span>
             </div>
-            
-            <!-- Selection Dot -->
-            <span 
-              v-if="selectedRackId === rak.id" 
-              class="position-absolute shadow-sm" 
-              style="width: 10px; height: 10px; border-radius: 50%; top: -3px; right: -3px; background-color: #2563eb; border: 1.5px solid #ffffff;"
-            ></span>
           </div>
         </div>
       </div>
@@ -485,6 +591,30 @@ const viewProducts = () => {
             <div class="mb-3">
               <label for="addKeterangan" class="form-label-style">Keterangan Lokasi</label>
               <textarea id="addKeterangan" v-model="formKeterangan" class="form-control-style" rows="3" placeholder="Contoh: Koridor samping kasir."></textarea>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="addBaris" class="form-label-style">Baris / Blok <span class="text-danger">*</span></label>
+                <input type="text" id="addBaris" v-model="formBaris" class="form-control-style" placeholder="Contoh: A, B, C, atau 1, 2" required />
+              </div>
+              <div class="col-3">
+                <label for="addLebar" class="form-label-style">Panjang</label>
+                <select id="addLebar" v-model.number="formLebar" class="form-control-style">
+                  <option :value="1">1x</option>
+                  <option :value="2">2x</option>
+                  <option :value="3">3x</option>
+                  <option :value="4">4x</option>
+                </select>
+              </div>
+              <div class="col-3">
+                <label for="addTinggi" class="form-label-style">Tinggi</label>
+                <select id="addTinggi" v-model.number="formTinggi" class="form-control-style">
+                  <option :value="1">1x</option>
+                  <option :value="2">2x</option>
+                  <option :value="3">3x</option>
+                </select>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -546,6 +676,30 @@ const viewProducts = () => {
             <div class="mb-3">
               <label for="editKeterangan" class="form-label-style">Keterangan Lokasi</label>
               <textarea id="editKeterangan" v-model="formKeterangan" class="form-control-style" rows="3"></textarea>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="editBaris" class="form-label-style">Baris / Blok <span class="text-danger">*</span></label>
+                <input type="text" id="editBaris" v-model="formBaris" class="form-control-style" placeholder="Contoh: A, B, C, atau 1, 2" required />
+              </div>
+              <div class="col-3">
+                <label for="editLebar" class="form-label-style">Panjang</label>
+                <select id="editLebar" v-model.number="formLebar" class="form-control-style">
+                  <option :value="1">1x</option>
+                  <option :value="2">2x</option>
+                  <option :value="3">3x</option>
+                  <option :value="4">4x</option>
+                </select>
+              </div>
+              <div class="col-3">
+                <label for="editTinggi" class="form-label-style">Tinggi</label>
+                <select id="editTinggi" v-model.number="formTinggi" class="form-control-style">
+                  <option :value="1">1x</option>
+                  <option :value="2">2x</option>
+                  <option :value="3">3x</option>
+                </select>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -610,27 +764,33 @@ const viewProducts = () => {
   display: inline-block;
 }
 
-.denah-flex-container {
-  display: flex;
-  flex-wrap: wrap;
+.baris-wrapper {
+  border-bottom: 2px dashed #e2e8f0;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.baris-wrapper:last-child {
+  border-bottom: none;
+  margin-bottom: 0 !important;
+}
+
+.denah-grid-container {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols, 6), 90px);
+  grid-auto-rows: 80px;
   gap: 12px;
   justify-content: flex-start;
   transition: all 0.3s ease;
-}
-
-.denah-flex-container.layout-vertikal {
-  max-width: 192px; /* Holds exactly 2 columns of 90px + 12px gap */
-}
-
-.denah-flex-container.layout-kotak {
-  max-width: 396px; /* Holds exactly 4 columns of 90px + 3 * 12px gap */
-}
-
-.denah-flex-container.layout-horizontal {
-  max-width: 100%;
+  width: max-content;
+  min-width: 100%;
 }
 
 .rak-box-wrapper {
+  grid-column: span var(--lebar, 1);
+  grid-row: span var(--tinggi, 1);
   transition: all 0.2s;
 }
 
@@ -640,8 +800,9 @@ const viewProducts = () => {
 }
 
 .rak-denah-cell {
-  width: 90px;
-  height: 80px;
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
   border-style: solid;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;

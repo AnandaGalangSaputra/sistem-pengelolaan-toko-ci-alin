@@ -300,7 +300,7 @@ export const fetchTransactions = async () => {
   }
 }
 
-export const addRack = async (nama_rak, keterangan = '', color = null) => {
+export const addRack = async (nama_rak, keterangan = '', color = null, baris = '1', lebar = 1, tinggi = 1) => {
   try {
     const response = await fetch('http://localhost:8000/api/raks', {
       method: 'POST',
@@ -309,7 +309,7 @@ export const addRack = async (nama_rak, keterangan = '', color = null) => {
         'Accept': 'application/json'
       },
       credentials: 'include',
-      body: JSON.stringify({ nama_rak, keterangan, color })
+      body: JSON.stringify({ nama_rak, keterangan, color, baris, lebar, tinggi })
     })
     const resData = await response.json()
     if (response.ok && resData.success) {
@@ -326,7 +326,7 @@ export const addRack = async (nama_rak, keterangan = '', color = null) => {
   }
 }
 
-export const editRack = async (id, nama_rak, keterangan = '', color = null) => {
+export const editRack = async (id, nama_rak, keterangan = '', color = null, baris = '1', lebar = 1, tinggi = 1) => {
   try {
     const response = await fetch(`http://localhost:8000/api/raks/${id}`, {
       method: 'PUT',
@@ -335,7 +335,7 @@ export const editRack = async (id, nama_rak, keterangan = '', color = null) => {
         'Accept': 'application/json'
       },
       credentials: 'include',
-      body: JSON.stringify({ nama_rak, keterangan, color })
+      body: JSON.stringify({ nama_rak, keterangan, color, baris, lebar, tinggi })
     })
     const resData = await response.json()
     if (response.ok && resData.success) {

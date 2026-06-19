@@ -267,7 +267,10 @@ class BarangController extends Controller
         $request->validate([
             'nama_rak' => 'required|string|max:255|unique:raks,nama_rak',
             'keterangan' => 'nullable|string',
-            'color' => 'nullable|string|max:50'
+            'color' => 'nullable|string|max:50',
+            'baris' => 'nullable|string|max:50',
+            'lebar' => 'nullable|integer|min:1|max:4',
+            'tinggi' => 'nullable|integer|min:1|max:3'
         ]);
 
         $rackName = trim($request->nama_rak);
@@ -285,7 +288,10 @@ class BarangController extends Controller
             'nama_rak' => $rackName,
             'kode_rak' => $kode_rak,
             'keterangan' => $request->keterangan,
-            'color' => $request->color
+            'color' => $request->color,
+            'baris' => $request->baris ?? '1',
+            'lebar' => $request->lebar ?? 1,
+            'tinggi' => $request->tinggi ?? 1
         ]);
 
         return response()->json([
@@ -318,13 +324,19 @@ class BarangController extends Controller
         $request->validate([
             'nama_rak' => 'required|string|max:255|unique:raks,nama_rak,' . $id,
             'keterangan' => 'nullable|string',
-            'color' => 'nullable|string|max:50'
+            'color' => 'nullable|string|max:50',
+            'baris' => 'nullable|string|max:50',
+            'lebar' => 'nullable|integer|min:1|max:4',
+            'tinggi' => 'nullable|integer|min:1|max:3'
         ]);
 
         $rackName = trim($request->nama_rak);
         $rak->nama_rak = $rackName;
         $rak->keterangan = $request->keterangan;
         $rak->color = $request->color;
+        $rak->baris = $request->baris ?? '1';
+        $rak->lebar = $request->lebar ?? 1;
+        $rak->tinggi = $request->tinggi ?? 1;
         $rak->save();
 
         return response()->json([

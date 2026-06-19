@@ -847,7 +847,7 @@ const sendWaReceipt = async () => {
     <!-- Checkout Modal -->
     <transition name="modal">
       <div v-if="showCheckoutModal" class="modal-backdrop-custom">
-        <div class="modal-card-custom animate-fade-in" style="max-width: 440px;">
+        <div class="modal-card-custom animate-fade-in" style="max-width: 440px; max-height: 90vh;">
           <div class="modal-header-custom border-bottom">
             <h3 class="modal-title-custom">
               <i class="bi bi-cash-coin text-primary me-2"></i>Pembayaran Transaksi
@@ -857,7 +857,7 @@ const sendWaReceipt = async () => {
             </button>
           </div>
 
-          <div class="modal-body-custom pb-3">
+          <div class="modal-body-custom pb-3" style="overflow-y: auto; flex: 1;">
             <!-- Total header -->
             <div class="mb-3 text-center">
               <span class="text-muted small d-block">TOTAL TAGIHAN</span>
