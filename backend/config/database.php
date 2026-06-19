@@ -35,7 +35,25 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => (function() {
+                $db = env('DB_DATABASE');
+                if (empty($db)) {
+                    return database_path('database.sqlite');
+                }
+                if ($db === ':memory:') {
+                    return $db;
+                }
+                $isAbsolute = strpos($db, '/') === 0 || strpos($db, '\\') === 0 || preg_match('/^[a-zA-Z]:[\\\\\/]/', $db);
+                if (!$isAbsolute) {
+                    if (strpos($db, './') === 0) {
+                        $db = substr($db, 2);
+                    } elseif (strpos($db, '.\\') === 0) {
+                        $db = substr($db, 2);
+                    }
+                    return base_path($db);
+                }
+                return $db;
+            })(),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,

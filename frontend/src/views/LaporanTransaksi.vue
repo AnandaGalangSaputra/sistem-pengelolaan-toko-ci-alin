@@ -650,7 +650,7 @@ const successToastMsg = ref('')
             </tr>
             <tr v-if="filteredTransactions.length === 0">
               <td :colspan="isOwner ? 11 : 10" class="text-center py-4 text-muted">
-                {{ transactionsList.value.length === 0 ? 'Belum ada transaksi terekam di sistem.' : 'Tidak ada transaksi yang cocok dengan pencarian Anda.' }}
+                {{ transactionsList.length === 0 ? 'Belum ada transaksi terekam di sistem.' : 'Tidak ada transaksi yang cocok dengan pencarian Anda.' }}
               </td>
             </tr>
           </tbody>
