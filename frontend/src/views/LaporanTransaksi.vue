@@ -20,13 +20,13 @@ const availableMonths = computed(() => {
       monthsSet.add(tx.date.substring(0, 7)) // "YYYY-MM"
     }
   })
-  
+
   const sorted = Array.from(monthsSet).sort().reverse()
   const monthNames = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ]
-  
+
   return sorted.map(ym => {
     const [year, month] = ym.split('-')
     const monthName = monthNames[parseInt(month, 10) - 1] || month
@@ -245,12 +245,12 @@ const filteredTransactions = computed(() => {
       const cashier = (tx.cashierName || '').toLowerCase()
       const dateStr = getReadableDate(tx.date).toLowerCase()
 
-      return kode.includes(q) || 
-             txId.includes(q) || 
-             name.includes(q) || 
-             phone.includes(q) || 
-             cashier.includes(q) || 
-             dateStr.includes(q)
+      return kode.includes(q) ||
+        txId.includes(q) ||
+        name.includes(q) ||
+        phone.includes(q) ||
+        cashier.includes(q) ||
+        dateStr.includes(q)
     })
   }
 
@@ -350,7 +350,8 @@ const successToastMsg = ref('')
   <div class="laporan-wrapper">
     <!-- Success Toast Alert -->
     <transition name="fade">
-      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow" role="alert">
+      <div v-if="successToastMsg" class="custom-alert alert alert-success d-flex align-items-center shadow"
+        role="alert">
         <i class="bi bi-check-circle-fill me-2 fs-5"></i>
         <div>{{ successToastMsg }}</div>
       </div>
@@ -361,11 +362,14 @@ const successToastMsg = ref('')
       <div>
         <h1 class="page-title">Laporan Transaksi</h1>
         <div class="d-flex align-items-center gap-2 mb-1.5">
-          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-3 fw-semibold" style="font-size: 0.78rem;">
+          <span
+            class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-3 fw-semibold"
+            style="font-size: 0.78rem;">
             <i class="bi bi-calendar-check-fill me-1"></i> Hari Ini: {{ getTodayFullDateIndonesian() }}
           </span>
         </div>
-        <p class="page-subtitle">Analisis hasil penjualan, omset harian, potongan diskon, dan capaian target Toko Ce Alin.</p>
+        <p class="page-subtitle">Analisis hasil penjualan, omset harian, potongan diskon, dan capaian target Toko Ce
+          Alin.</p>
       </div>
 
       <div class="d-flex gap-3 align-items-center flex-wrap">
@@ -375,26 +379,20 @@ const successToastMsg = ref('')
             <i class="bi bi-calendar-range-fill text-primary"></i> Pilih Bulan:
           </span>
           <div class="position-relative d-flex align-items-center">
-            <input 
-              type="month" 
-              v-model="filterMonth" 
-              class="form-control form-control-sm border-secondary-subtle rounded-3 shadow-xs" 
-              style="width: 175px; height: 38px; font-weight: 500; font-size: 0.85rem; padding-right: 32px;"
-            />
-            <button 
-              v-if="filterMonth" 
-              @click="filterMonth = ''" 
-              class="btn btn-link btn-sm text-secondary position-absolute end-0 me-2.5 p-0 border-0 d-flex align-items-center justify-content-center" 
-              style="height: 24px; width: 24px; top: 7px; text-decoration: none;"
-              title="Semua Bulan"
-            >
+            <input type="month" v-model="filterMonth"
+              class="form-control form-control-sm border-secondary-subtle rounded-3 shadow-xs"
+              style="width: 175px; height: 38px; font-weight: 500; font-size: 0.85rem; padding-right: 32px;" />
+            <button v-if="filterMonth" @click="filterMonth = ''"
+              class="btn btn-link btn-sm text-secondary position-absolute end-0 me-2.5 p-0 border-0 d-flex align-items-center justify-content-center"
+              style="height: 24px; width: 24px; top: 7px; text-decoration: none;" title="Semua Bulan">
               <i class="bi bi-x-circle-fill fs-6 text-muted"></i>
             </button>
           </div>
         </div>
 
         <div class="d-flex gap-2">
-          <button @click="triggerPrint('harian')" class="btn btn-outline-primary-custom d-flex align-items-center py-2 px-3">
+          <button @click="triggerPrint('harian')"
+            class="btn btn-outline-primary-custom d-flex align-items-center py-2 px-3">
             <i class="bi bi-printer-fill me-1.5"></i>Cetak Harian
           </button>
           <button @click="triggerPrint('bulanan')" class="btn btn-primary-custom d-flex align-items-center py-2 px-3">
@@ -446,12 +444,14 @@ const successToastMsg = ref('')
       <div v-if="isOwner" class="col-12 col-md-6 col-lg-4 col-xl">
         <div class="metrics-card">
           <div class="card-body">
-            <div class="card-icon-container" :class="netProfit >= 0 ? 'icon-success' : 'icon-warning'" :style="netProfit >= 0 ? '' : 'background-color: #fef2f2; color: #dc2626;'">
+            <div class="card-icon-container" :class="netProfit >= 0 ? 'icon-success' : 'icon-warning'"
+              :style="netProfit >= 0 ? '' : 'background-color: #fef2f2; color: #dc2626;'">
               <i class="bi" :class="netProfit >= 0 ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow'"></i>
             </div>
             <div class="card-info">
               <span class="card-label">{{ netProfit >= 0 ? 'Keuntungan Bersih' : 'Kerugian Bersih' }}</span>
-              <span class="card-value" :class="netProfit >= 0 ? 'text-success' : 'text-danger'">{{ formatRupiah(Math.abs(netProfit)) }}</span>
+              <span class="card-value" :class="netProfit >= 0 ? 'text-success' : 'text-danger'">{{
+                formatRupiah(Math.abs(netProfit)) }}</span>
             </div>
             <div class="card-bottom" :class="netProfit >= 0 ? 'text-success' : 'text-danger'">
               <span>{{ netProfit >= 0 ? 'Status surplus keuntungan' : 'Status defisit kerugian' }}</span>
@@ -506,34 +506,30 @@ const successToastMsg = ref('')
         </div>
         <div class="text-end">
           <span class="fs-4 fw-bold text-primary">{{ targetPercent }}%</span>
-          
+
           <div class="d-flex align-items-center justify-content-end gap-1 mt-0.5" style="min-height: 25px;">
             <span class="text-muted small">{{ formatRupiah(totalRevenue) }} / </span>
-            
+
             <span v-if="!isEditingTarget" class="fw-bold text-dark small d-inline-flex align-items-center">
               {{ formatRupiah(state.salesTarget) }}
-              <button 
-                v-if="state.currentUser?.role === 'owner'"
-                @click="isEditingTarget = true" 
-                class="btn btn-sm border-0 p-0 text-primary ms-1 d-flex align-items-center" 
-                title="Ubah Target"
-              >
+              <button v-if="state.currentUser?.role === 'owner'" @click="isEditingTarget = true"
+                class="btn btn-sm border-0 p-0 text-primary ms-1 d-flex align-items-center" title="Ubah Target">
                 <i class="bi bi-pencil-fill" style="font-size: 0.72rem;"></i>
               </button>
             </span>
-            
+
             <div v-else class="d-inline-flex align-items-center gap-1">
-              <input 
-                type="number" 
-                v-model.number="tempTarget" 
-                class="form-control form-control-sm text-end px-1 fw-bold" 
-                style="font-size: 0.75rem; height: 22px; width: 95px; padding: 1px 4px;"
-                min="10000"
-              />
-              <button @click="saveTarget" class="btn btn-sm btn-success py-0 px-1 d-flex align-items-center justify-content-center" style="font-size: 0.7rem; height: 22px; width: 22px;">
+              <input type="number" v-model.number="tempTarget"
+                class="form-control form-control-sm text-end px-1 fw-bold"
+                style="font-size: 0.75rem; height: 22px; width: 95px; padding: 1px 4px;" min="10000" />
+              <button @click="saveTarget"
+                class="btn btn-sm btn-success py-0 px-1 d-flex align-items-center justify-content-center"
+                style="font-size: 0.7rem; height: 22px; width: 22px;">
                 <i class="bi bi-check"></i>
               </button>
-              <button @click="isEditingTarget = false" class="btn btn-sm btn-light border py-0 px-1 d-flex align-items-center justify-content-center" style="font-size: 0.7rem; height: 22px; width: 22px;">
+              <button @click="isEditingTarget = false"
+                class="btn btn-sm btn-light border py-0 px-1 d-flex align-items-center justify-content-center"
+                style="font-size: 0.7rem; height: 22px; width: 22px;">
                 <i class="bi bi-x"></i>
               </button>
             </div>
@@ -541,13 +537,8 @@ const successToastMsg = ref('')
         </div>
       </div>
       <div class="progress" style="height: 12px; background-color: #f1f5f9; border-radius: 6px;">
-        <div 
-          class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-          role="progressbar" 
-          :style="{ width: targetPercent + '%' }"
-          aria-valuemin="0" 
-          aria-valuemax="100"
-        ></div>
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar"
+          :style="{ width: targetPercent + '%' }" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
     </div>
 
@@ -561,13 +552,9 @@ const successToastMsg = ref('')
         <!-- Search bar specifically for transactions in reports -->
         <div class="position-relative" style="width: 320px;">
           <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted small"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            class="form-control-style py-1.5 ps-5"
-            placeholder="Cari ID, nama pembeli, atau tanggal..." 
-            style="height: 38px; padding-left: 38px !important; border-radius: 8px;"
-          />
+          <input type="text" v-model="searchQuery" class="form-control-style py-1.5 ps-5"
+            placeholder="Cari ID, nama pembeli, atau tanggal..."
+            style="height: 38px; padding-left: 38px !important; border-radius: 8px;" />
         </div>
       </div>
 
@@ -577,11 +564,13 @@ const successToastMsg = ref('')
             <tr>
               <th @click="toggleSort('id')" style="cursor: pointer; user-select: none;">
                 ID Transaksi
-                <i class="bi ms-1" :class="sortBy.startsWith('id') ? (sortBy === 'id-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('id') ? (sortBy === 'id-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th @click="toggleSort('date')" style="cursor: pointer; user-select: none;">
                 Waktu
-                <i class="bi ms-1" :class="sortBy.startsWith('date') ? (sortBy === 'date-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('date') ? (sortBy === 'date-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th>Petugas</th>
               <th>Nama Pembeli</th>
@@ -590,7 +579,8 @@ const successToastMsg = ref('')
               <th v-if="isOwner">Keuntungan / Kerugian</th>
               <th @click="toggleSort('total')" style="cursor: pointer; user-select: none;">
                 Total Pembayaran
-                <i class="bi ms-1" :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
+                <i class="bi ms-1"
+                  :class="sortBy.startsWith('total') ? (sortBy === 'total-asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up-alt text-primary') : 'bi-arrow-down-up text-muted small'"></i>
               </th>
               <th>Metode Bayar</th>
               <th class="text-center">Status</th>
@@ -626,31 +616,33 @@ const successToastMsg = ref('')
               </td>
               <td class="fw-bold text-success">{{ formatRupiah(tx.total) }}</td>
               <td class="text-center">
-                <span
-                  class="badge py-1 px-2 rounded-4 fw-semibold"
-                  :class="tx.metode_pembayaran === 'QRIS'
-                    ? 'bg-primary bg-opacity-10 text-primary border border-primary'
-                    : 'bg-success bg-opacity-10 text-success border border-success'"
-                  style="font-size: 0.72rem;"
-                >
+                <span class="badge py-1 px-2 rounded-4 fw-semibold" :class="tx.metode_pembayaran === 'QRIS'
+                  ? 'bg-primary bg-opacity-10 text-primary border border-primary'
+                  : 'bg-success bg-opacity-10 text-success border border-success'" style="font-size: 0.72rem;">
                   <i class="bi me-1" :class="tx.metode_pembayaran === 'QRIS' ? 'bi-qr-code' : 'bi-cash-coin'"></i>
                   {{ tx.metode_pembayaran || 'Tunai' }}
                 </span>
               </td>
               <td class="text-center">
-                <span class="badge bg-success bg-opacity-10 text-success border border-success py-1.5 px-3 rounded-5" style="font-size: 0.72rem; font-weight: 600;">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success py-1.5 px-3 rounded-5"
+                  style="font-size: 0.72rem; font-weight: 600;">
                   <i class="bi bi-check-circle-fill me-1"></i>Selesai
                 </span>
               </td>
               <td class="text-center">
-                <button @click="openDetailModal(tx)" class="btn btn-sm btn-outline-primary rounded-3 border-0 py-1.5 px-2" title="Detail Transaksi">
+                <button @click="openDetailModal(tx)"
+                  class="btn btn-sm btn-outline-primary rounded-3 border-0 py-1.5 px-2" title="Detail Transaksi">
                   <i class="bi bi-eye-fill fs-6"></i>
                 </button>
               </td>
             </tr>
             <tr v-if="filteredTransactions.length === 0">
               <td :colspan="isOwner ? 11 : 10" class="text-center py-4 text-muted">
-                {{ transactionsList.length === 0 ? 'Belum ada transaksi terekam di sistem.' : 'Tidak ada transaksi yang cocok dengan pencarian Anda.' }}
+                {{
+                  transactionsList.length === 0
+                    ? 'Belum ada transaksi terekam di sistem.'
+                    : 'Tidak ada transaksi yang cocok dengan pencarian Anda.'
+                }}
               </td>
             </tr>
           </tbody>
@@ -658,14 +650,18 @@ const successToastMsg = ref('')
       </div>
 
       <!-- Pagination Controls -->
-      <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
+      <div v-if="totalPages > 1"
+        class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
         <div class="text-muted small">
-          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage * itemsPerPage, filteredTransactions.length) }}</strong> dari <strong>{{ filteredTransactions.length }}</strong> transaksi
+          Menampilkan <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> - <strong>{{ Math.min(currentPage *
+            itemsPerPage, filteredTransactions.length) }}</strong> dari <strong>{{ filteredTransactions.length
+            }}</strong> transaksi
         </div>
         <nav aria-label="Page navigation">
           <ul class="pagination pagination-sm mb-0">
             <li class="page-item" :class="{ disabled: currentPage === 1 }">
-              <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1" aria-label="Previous">
+              <button class="page-link rounded-start-3" @click="currentPage--" :disabled="currentPage === 1"
+                aria-label="Previous">
                 <i class="bi bi-chevron-left"></i>
               </button>
             </li>
@@ -673,7 +669,8 @@ const successToastMsg = ref('')
               <button class="page-link" @click="currentPage = page">{{ page }}</button>
             </li>
             <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-              <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages" aria-label="Next">
+              <button class="page-link rounded-end-3" @click="currentPage++" :disabled="currentPage === totalPages"
+                aria-label="Next">
                 <i class="bi bi-chevron-right"></i>
               </button>
             </li>
@@ -704,11 +701,13 @@ const successToastMsg = ref('')
               </div>
               <div class="col-6 col-sm-4">
                 <span class="text-muted small d-block">Kode Transaksi</span>
-                <code class="text-primary-emphasis bg-white border px-2 py-0.5 rounded small" style="font-size: 0.8rem;">{{ selectedTx?.kode_transaksi }}</code>
+                <code class="text-primary-emphasis bg-white border px-2 py-0.5 rounded small"
+                  style="font-size: 0.8rem;">{{ selectedTx?.kode_transaksi }}</code>
               </div>
               <div class="col-6 col-sm-4">
                 <span class="text-muted small d-block">Petugas Kasir</span>
-                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1"></i>{{ selectedTx?.cashierName || 'System' }}</span>
+                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1"></i>{{ selectedTx?.cashierName ||
+                  'System' }}</span>
               </div>
               <div class="col-6 col-sm-4">
                 <span class="text-muted small d-block">Nama Pelanggan</span>
@@ -717,7 +716,9 @@ const successToastMsg = ref('')
               <div class="col-6 col-sm-4">
                 <span class="text-muted small d-block">WhatsApp Pelanggan</span>
                 <span class="fw-semibold text-dark">
-                  <a v-if="selectedTx?.customer?.phone" :href="'https://wa.me/' + selectedTx.customer.phone.replace(/[^0-9]/g, '')" target="_blank" class="text-success text-decoration-none">
+                  <a v-if="selectedTx?.customer?.phone"
+                    :href="'https://wa.me/' + selectedTx.customer.phone.replace(/[^0-9]/g, '')" target="_blank"
+                    class="text-success text-decoration-none">
                     <i class="bi bi-whatsapp me-1"></i>{{ selectedTx.customer.phone }}
                   </a>
                   <span v-else class="text-muted">-</span>
@@ -725,8 +726,11 @@ const successToastMsg = ref('')
               </div>
               <div class="col-6 col-sm-4">
                 <span class="text-muted small d-block">Metode Pembayaran</span>
-                <span class="badge py-1 px-2 rounded-4 fw-semibold" :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bg-primary bg-opacity-10 text-primary border border-primary' : 'bg-success bg-opacity-10 text-success border border-success'" style="font-size: 0.7rem;">
-                  <i class="bi me-1" :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bi-qr-code' : 'bi-cash-coin'"></i>
+                <span class="badge py-1 px-2 rounded-4 fw-semibold"
+                  :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bg-primary bg-opacity-10 text-primary border border-primary' : 'bg-success bg-opacity-10 text-success border border-success'"
+                  style="font-size: 0.7rem;">
+                  <i class="bi me-1"
+                    :class="selectedTx?.metode_pembayaran === 'QRIS' ? 'bi-qr-code' : 'bi-cash-coin'"></i>
                   {{ selectedTx?.metode_pembayaran || 'Tunai' }}
                 </span>
               </div>
@@ -748,16 +752,20 @@ const successToastMsg = ref('')
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(detail, idx) in selectedTx?.details" :key="detail.id" class="border-bottom border-light">
+                    <tr v-for="(detail, idx) in selectedTx?.details" :key="detail.id"
+                      class="border-bottom border-light">
                       <td class="text-muted fw-bold">{{ idx + 1 }}</td>
                       <td>
-                        <div class="fw-semibold text-dark">{{ detail.barang?.name || 'Produk Tidak Dikenal / Dihapus' }}</div>
-                        <div v-if="detail.barang?.kode_barang" class="text-muted small" style="font-size: 0.75rem;">{{ detail.barang.kode_barang }}</div>
+                        <div class="fw-semibold text-dark">{{ detail.barang?.name || 'Produk Tidak Dikenal / Dihapus' }}
+                        </div>
+                        <div v-if="detail.barang?.kode_barang" class="text-muted small" style="font-size: 0.75rem;">{{
+                          detail.barang.kode_barang }}</div>
                       </td>
                       <td class="text-center fw-bold text-dark">{{ detail.qty }}</td>
                       <td class="text-end text-dark">{{ formatRupiah(detail.harga) }}</td>
                       <td v-if="isOwner" class="text-end text-success fw-semibold">
-                        {{ formatRupiah(detail.subtotal - (detail.barang ? detail.barang.harga_beli * detail.qty : 0)) }}
+                        {{ formatRupiah(detail.subtotal - (detail.barang ? detail.barang.harga_beli * detail.qty : 0))
+                        }}
                       </td>
                       <td class="text-end fw-bold text-dark">{{ formatRupiah(detail.subtotal) }}</td>
                     </tr>
@@ -772,13 +780,17 @@ const successToastMsg = ref('')
             <!-- Totals box -->
             <div class="row justify-content-end">
               <div class="col-12 col-sm-6">
-                <div class="d-flex justify-content-between py-1 border-bottom border-dashed" style="border-bottom-style: dashed !important;">
+                <div class="d-flex justify-content-between py-1 border-bottom border-dashed"
+                  style="border-bottom-style: dashed !important;">
                   <span class="text-muted">Total Harga (Kotor):</span>
-                  <span class="fw-semibold text-dark">{{ formatRupiah(Number(selectedTx?.total) + Number(selectedTx?.discount)) }}</span>
+                  <span class="fw-semibold text-dark">{{ formatRupiah(Number(selectedTx?.total) +
+                    Number(selectedTx?.discount)) }}</span>
                 </div>
-                <div class="d-flex justify-content-between py-1 border-bottom border-dashed text-danger" style="border-bottom-style: dashed !important;">
+                <div class="d-flex justify-content-between py-1 border-bottom border-dashed text-danger"
+                  style="border-bottom-style: dashed !important;">
                   <span>Potongan Diskon:</span>
-                  <span class="fw-semibold">{{ selectedTx?.discount > 0 ? '-' + formatRupiah(selectedTx.discount) : '-' }}</span>
+                  <span class="fw-semibold">{{ selectedTx?.discount > 0 ? '-' + formatRupiah(selectedTx.discount) : '-'
+                  }}</span>
                 </div>
                 <div class="d-flex justify-content-between py-2 fw-bold text-dark fs-5">
                   <span>Total Pembayaran:</span>
@@ -810,7 +822,8 @@ const successToastMsg = ref('')
 
           <div class="modal-body-custom overflow-y-auto bg-light p-4" style="flex: 1;">
             <!-- Printable Sheet Paper wrapper -->
-            <div class="printable-report-area bg-white shadow-sm p-5 border rounded-2 mx-auto" style="width: 100%; max-width: 580px; min-height: 700px; color: #000000; font-family: 'Poppins', sans-serif;">
+            <div class="printable-report-area bg-white shadow-sm p-5 border rounded-2 mx-auto"
+              style="width: 100%; max-width: 580px; min-height: 700px; color: #000000; font-family: 'Poppins', sans-serif;">
               <!-- Document Shop Header -->
               <div class="text-center border-bottom pb-4 mb-4">
                 <h3 class="fw-bold mb-1" style="color: #1e293b; font-size: 1.4rem;">{{ getShopName() }}</h3>
@@ -822,7 +835,8 @@ const successToastMsg = ref('')
 
               <!-- Report Title Section -->
               <div class="text-center mb-4">
-                <h5 class="fw-bold mb-1" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 1rem; color: #0f172a;">
+                <h5 class="fw-bold mb-1"
+                  style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 1rem; color: #0f172a;">
                   LAPORAN PENJUALAN {{ printType === 'harian' ? 'HARIAN' : 'BULANAN' }}
                 </h5>
                 <p class="text-muted small" style="font-size: 0.78rem;">
@@ -846,8 +860,10 @@ const successToastMsg = ref('')
                 </div>
                 <div v-if="isOwner" class="col-6 mt-3">
                   <div class="small text-muted mb-0.5">Keuntungan / Kerugian Bersih</div>
-                  <div class="fw-bold" :style="{ fontSize: '1.15rem', color: (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? '#16a34a' : '#dc2626' }">
-                    {{ (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{ formatRupiah(Math.abs(printType === 'harian' ? todayNetProfitOnly : netProfit)) }}
+                  <div class="fw-bold"
+                    :style="{ fontSize: '1.15rem', color: (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? '#16a34a' : '#dc2626' }">
+                    {{ (printType === 'harian' ? todayNetProfitOnly : netProfit) >= 0 ? 'Surplus: ' : 'Defisit: ' }}{{
+                      formatRupiah(Math.abs(printType === 'harian' ? todayNetProfitOnly : netProfit)) }}
                   </div>
                 </div>
                 <div class="col-6" :class="{ 'mt-3': isOwner }">
@@ -863,7 +879,8 @@ const successToastMsg = ref('')
                 <h6 class="fw-bold mb-2.5 text-dark" style="font-size: 0.85rem;">Rincian Log Transaksi Penjualan</h6>
                 <table class="w-100" style="font-size: 0.72rem; border-collapse: collapse;">
                   <thead>
-                    <tr style="border-bottom: 2px solid #cbd5e1; border-top: 1px solid #e2e8f0; background-color: #f8fafc;">
+                    <tr
+                      style="border-bottom: 2px solid #cbd5e1; border-top: 1px solid #e2e8f0; background-color: #f8fafc;">
                       <th class="py-2 text-start px-2" style="width: 80px;">ID Transaksi</th>
                       <th class="py-2 text-start px-2" style="width: 55px;">Waktu</th>
                       <th class="py-2 text-start px-2" style="width: 80px;">Petugas</th>
@@ -874,13 +891,15 @@ const successToastMsg = ref('')
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="tx in (printType === 'harian' ? todayTransactionsOnly : transactionsList)" :key="tx.id" style="border-bottom: 1px solid #f1f5f9;">
+                    <tr v-for="tx in (printType === 'harian' ? todayTransactionsOnly : transactionsList)" :key="tx.id"
+                      style="border-bottom: 1px solid #f1f5f9;">
                       <td class="py-2 px-2 font-monospace text-secondary">#TX-{{ tx.id }}</td>
                       <td class="py-2 px-2">{{ tx.time }}</td>
                       <td class="py-2 px-2 text-dark">{{ tx.cashierName || 'System' }}</td>
                       <td class="py-2 px-2 text-dark">{{ tx.customer?.name || 'Umum' }}</td>
                       <td class="py-2 px-2 text-center">{{ tx.itemsCount }} unit</td>
-                      <td v-if="isOwner" class="py-2 px-2 text-end" :style="{ color: tx.total - getTransactionCogs(tx) >= 0 ? '#16a34a' : '#dc2626', fontWeight: '500' }">
+                      <td v-if="isOwner" class="py-2 px-2 text-end"
+                        :style="{ color: tx.total - getTransactionCogs(tx) >= 0 ? '#16a34a' : '#dc2626', fontWeight: '500' }">
                         {{ formatRupiah(tx.total - getTransactionCogs(tx)) }}
                       </td>
                       <td class="py-2 px-2 text-end fw-semibold text-dark">{{ formatRupiah(tx.total) }}</td>
@@ -893,8 +912,10 @@ const successToastMsg = ref('')
               <div class="row mt-5 pt-5 text-center" style="font-size: 0.8rem;">
                 <div class="col-6">
                   <div class="text-secondary small mb-5">Petugas Laporan</div>
-                  <div class="fw-bold text-dark" style="text-decoration: underline;">{{ state.currentUser?.name || 'Ananda Galang' }}</div>
-                  <div class="text-muted small" style="font-size: 0.72rem;">{{ state.currentUser?.role === 'owner' ? 'Owner Toko' : 'Staff Operasional' }}</div>
+                  <div class="fw-bold text-dark" style="text-decoration: underline;">{{ state.currentUser?.name ||
+                    'Ananda Galang' }}</div>
+                  <div class="text-muted small" style="font-size: 0.72rem;">{{ state.currentUser?.role === 'owner' ?
+                    'Owner Toko' : 'Staff Operasional' }}</div>
                 </div>
                 <div class="col-6">
                   <div class="text-secondary small mb-5">Pemilik Toko</div>
@@ -923,6 +944,7 @@ const successToastMsg = ref('')
   overflow-y: auto;
   height: calc(100vh - 70px);
 }
+
 @media (max-width: 991px) {
   .laporan-wrapper {
     height: auto;
@@ -939,32 +961,35 @@ const successToastMsg = ref('')
     padding: 0 !important;
     margin: 0 !important;
   }
-  
+
   /* Hide the sidebar */
-  .sidebar, .sidebar-wrapper, aside {
+  .sidebar,
+  .sidebar-wrapper,
+  aside {
     display: none !important;
     visibility: hidden !important;
   }
-  
+
   /* Hide the top header */
-  .top-header-main, header {
+  .top-header-main,
+  header {
     display: none !important;
     visibility: hidden !important;
   }
-  
+
   /* Hide everything inside laporan-wrapper except the print modal */
-  .laporan-wrapper > *:not(.modal-backdrop-custom) {
+  .laporan-wrapper>*:not(.modal-backdrop-custom) {
     display: none !important;
     visibility: hidden !important;
   }
-  
+
   /* Hide modal header and footer in the print modal */
   .modal-backdrop-custom .modal-header-custom,
   .modal-backdrop-custom .modal-footer-custom {
     display: none !important;
     visibility: hidden !important;
   }
-  
+
   /* Ensure the backdrop itself is transparent and has no centering/padding during print */
   .modal-backdrop-custom {
     background: transparent !important;
@@ -975,7 +1000,7 @@ const successToastMsg = ref('')
     width: auto !important;
     z-index: auto !important;
   }
-  
+
   .modal-card-custom {
     max-width: 100% !important;
     height: auto !important;
@@ -991,7 +1016,7 @@ const successToastMsg = ref('')
     background: transparent !important;
     overflow: visible !important;
   }
-  
+
   /* Ensure the printable report area is fully visible and spans the page */
   .printable-report-area {
     display: block !important;
