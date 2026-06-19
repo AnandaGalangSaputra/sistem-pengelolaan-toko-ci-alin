@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, watch } from 'vue'
-import { state, pairPrinter } from '../store/store.js'
+import { state, pairPrinter, API_URL } from '../store/store.js'
 
 const successToastMsg = ref('')
 
@@ -47,7 +47,7 @@ const saveConfig = () => {
 const backupDatabase = async () => {
   isBackingUp.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/database/backup', {
+    const response = await fetch(`${API_URL}/database/backup`, {
       credentials: 'include'
     })
     if (!response.ok) {
@@ -93,7 +93,7 @@ const handleDatabaseRestore = async (event) => {
   formData.append('database', file)
 
   try {
-    const response = await fetch('http://localhost:8000/api/database/restore', {
+    const response = await fetch(`${API_URL}/database/restore`, {
       method: 'POST',
       credentials: 'include',
       body: formData
@@ -126,7 +126,7 @@ const confirmDatabaseReset = async () => {
   isResetting.value = true
   try {
     const isClean = resetMode.value === 'clean'
-    const response = await fetch('http://localhost:8000/api/database/reset', {
+    const response = await fetch(`${API_URL}/database/reset`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

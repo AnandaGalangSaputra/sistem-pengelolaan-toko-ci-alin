@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { state, addTransaction, addNotification, fetchTransactions, fetchProducts } from '../store/store.js'
+import { state, addTransaction, addNotification, fetchTransactions, fetchProducts, API_URL } from '../store/store.js'
 
 const parseUtcToLocal = (dateStr) => {
   if (!dateStr) return new Date()
@@ -179,7 +179,7 @@ const startQrisPolling = (orderId) => {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/qris/status/${orderId}`, {
+      const res = await fetch(`${API_URL}/qris/status/${orderId}`, {
         credentials: 'include'
       })
       const data = await res.json()
@@ -242,7 +242,7 @@ const initiateQrisPayment = async () => {
   qrisOrderId.value = newOrderId
 
   try {
-    const res = await fetch('http://localhost:8000/api/qris/create', {
+    const res = await fetch(`${API_URL}/qris/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       credentials: 'include',
@@ -345,7 +345,7 @@ const completePayment = async () => {
 
   isCompletingPayment.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/transaksi', {
+    const response = await fetch(`${API_URL}/transaksi`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -581,7 +581,7 @@ const sendWaReceipt = async () => {
   isSendingWa.value = true
   try {
     const formattedMsg = formatReceiptMessage(finishedTransaction.value)
-    const response = await fetch('http://localhost:8000/api/whatsapp/broadcast', {
+    const response = await fetch(`${API_URL}/whatsapp/broadcast`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

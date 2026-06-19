@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <script>
+    (function() {
+      var path = window.location.pathname;
+      var routes = ['/dashboard-karyawan', '/login', '/dashboard-owner'];
+      var basePath = '/';
+      for (var i = 0; i < routes.length; i++) {
+        var idx = path.indexOf(routes[i]);
+        if (idx !== -1) {
+          basePath = path.substring(0, idx) + '/';
+          break;
+        }
+      }
+      var baseEl = document.createElement('base');
+      baseEl.href = basePath;
+      document.head.appendChild(baseEl);
+    })();
+  </script>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./assets/Asset%207-k3fU-utL.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Sistem Informasi Pengelolaan Stok dan Operasional Toko CE ALIN Berbasis Digital - Halaman Login Karyawan." />
+  <title>Sistem Toko Ce Alin</title>
+  <script type="module" crossorigin src="./assets/index-wnb-1cJG.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-addI9BwI.css">
+</head>
+
+<body>
+  <div id="app"></div>
+</body>
+
+</html>

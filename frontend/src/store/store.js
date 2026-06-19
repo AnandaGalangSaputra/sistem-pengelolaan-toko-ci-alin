@@ -1,5 +1,20 @@
 import { ref, reactive, watch } from 'vue'
 
+const getAppBasePath = () => {
+  const path = window.location.pathname;
+  const routes = ['/dashboard-karyawan', '/login', '/dashboard-owner'];
+  for (const r of routes) {
+    const idx = path.indexOf(r);
+    if (idx !== -1) {
+      return path.substring(0, idx);
+    }
+  }
+  return '';
+};
+
+export const APP_BASE_URL = getAppBasePath();
+export const API_URL = `${APP_BASE_URL}/api`;
+
 const DEFAULT_PRODUCTS = [
   {
     id: 1,
@@ -195,7 +210,7 @@ export const state = reactive({
 
 export const fetchProducts = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/barangs', {
+    const response = await fetch(`${API_URL}/barangs`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -209,7 +224,7 @@ export const fetchProducts = async () => {
 
 export const fetchRacks = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/raks', {
+    const response = await fetch(`${API_URL}/raks`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -235,7 +250,7 @@ export const fetchRacks = async () => {
 
 export const fetchTransactions = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/transaksi', {
+    const response = await fetch(`${API_URL}/transaksi`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -244,7 +259,7 @@ export const fetchTransactions = async () => {
         const dateObj = parseUtcToLocal(item.tanggal)
         const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
         const itemsCount = item.details ? item.details.reduce((sum, d) => sum + d.qty, 0) : 0
-        
+
         const details = item.details ? item.details.map(d => ({
           id: d.id,
           qty: d.qty,
@@ -283,7 +298,7 @@ export const fetchTransactions = async () => {
       state.discounts = transactionsWithDiscounts.map(tx => {
         const itemNames = tx.details.map(d => d.barang ? `${d.barang.name} (x${d.qty})` : 'Barang').join(', ')
         const truncatedItemNames = itemNames.length > 30 ? itemNames.substring(0, 27) + '...' : itemNames
-        
+
         return {
           id: tx.id,
           item: truncatedItemNames || 'Transaksi Kasir',
@@ -302,7 +317,7 @@ export const fetchTransactions = async () => {
 
 export const addRack = async (nama_rak, keterangan = '', color = null, baris = '1', lebar = 1, tinggi = 1) => {
   try {
-    const response = await fetch('http://localhost:8000/api/raks', {
+    const response = await fetch(`${API_URL}/raks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -328,7 +343,7 @@ export const addRack = async (nama_rak, keterangan = '', color = null, baris = '
 
 export const editRack = async (id, nama_rak, keterangan = '', color = null, baris = '1', lebar = 1, tinggi = 1) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/raks/${id}`, {
+    const response = await fetch(`${API_URL}/raks/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -344,7 +359,7 @@ export const editRack = async (id, nama_rak, keterangan = '', color = null, bari
         state.racks[idx] = resData.data
       }
       state.racks.sort((a, b) => a.nama_rak.localeCompare(b.nama_rak))
-      
+
       // Update local products cache to reflect new rack name
       state.products.forEach(p => {
         if (p.rak_id === id) {
@@ -364,7 +379,7 @@ export const editRack = async (id, nama_rak, keterangan = '', color = null, bari
 
 export const deleteRack = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/raks/${id}`, {
+    const response = await fetch(`${API_URL}/raks/${id}`, {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json'
@@ -423,7 +438,7 @@ watch(() => state.notifications, (newVal) => {
 // State Mutation helpers (calling Backend REST APIs)
 export const restockProduct = async (productId, amount) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/barangs/${productId}/restock`, {
+    const response = await fetch(`${API_URL}/barangs/${productId}/restock`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -454,7 +469,7 @@ export const restockProduct = async (productId, amount) => {
 
 export const addProduct = async (name, rack, stock, limit, price, hargaBeli, image = '') => {
   try {
-    const response = await fetch('http://localhost:8000/api/barangs', {
+    const response = await fetch(`${API_URL}/barangs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -483,7 +498,7 @@ export const addProduct = async (name, rack, stock, limit, price, hargaBeli, ima
 
 export const editProduct = async (id, updatedData) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/barangs/${id}`, {
+    const response = await fetch(`${API_URL}/barangs/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -522,7 +537,7 @@ export const editProduct = async (id, updatedData) => {
 
 export const deleteProduct = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/barangs/${id}`, {
+    const response = await fetch(`${API_URL}/barangs/${id}`, {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json'
@@ -578,7 +593,7 @@ export const addTransaction = async (items, total, discountVal, customer = null)
       } : null
     }
 
-    const response = await fetch('http://localhost:8000/api/transaksi', {
+    const response = await fetch(`${API_URL}/transaksi`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -619,7 +634,7 @@ export const addTransaction = async (items, total, discountVal, customer = null)
 
 export const checkWhatsappStatus = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/whatsapp/status', {
+    const response = await fetch(`${API_URL}/whatsapp/status`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -662,7 +677,7 @@ export const pairWA = (paired, phoneNumber = '') => {
 
 export const disconnectWA = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/whatsapp/disconnect', {
+    const response = await fetch(`${API_URL}/whatsapp/disconnect`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json'
@@ -683,7 +698,7 @@ export const disconnectWA = async () => {
 
 export const sendWABroadcast = async (message, numbers, template = '', target = '') => {
   try {
-    const response = await fetch('http://localhost:8000/api/whatsapp/broadcast', {
+    const response = await fetch(`${API_URL}/whatsapp/broadcast`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -720,7 +735,7 @@ export const addBroadcastHistory = (templateTitle, targetLabel) => {
 
 export const fetchCustomers = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/customers', {
+    const response = await fetch(`${API_URL}/customers`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -739,7 +754,7 @@ export const fetchCustomers = async () => {
 
 export const fetchBroadcastHistory = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/whatsapp/history', {
+    const response = await fetch(`${API_URL}/whatsapp/history`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -753,7 +768,7 @@ export const fetchBroadcastHistory = async () => {
 
 export const addCustomer = async (name, phone, type = 'Reguler') => {
   try {
-    const response = await fetch('http://localhost:8000/api/customers', {
+    const response = await fetch(`${API_URL}/customers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -778,7 +793,7 @@ export const addCustomer = async (name, phone, type = 'Reguler') => {
 
 export const deleteCustomer = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/customers/${id}`, {
+    const response = await fetch(`${API_URL}/customers/${id}`, {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json'
@@ -804,7 +819,7 @@ export const deleteCustomer = async (id) => {
 
 export const fetchUsers = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/users', {
+    const response = await fetch(`${API_URL}/users`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -818,7 +833,7 @@ export const fetchUsers = async () => {
 
 export const addUser = async (name, username, password, role) => {
   try {
-    const response = await fetch('http://localhost:8000/api/users', {
+    const response = await fetch(`${API_URL}/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -844,7 +859,7 @@ export const addUser = async (name, username, password, role) => {
 
 export const editUser = async (id, updatedData) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/users/${id}`, {
+    const response = await fetch(`${API_URL}/users/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -882,7 +897,7 @@ export const editUser = async (id, updatedData) => {
 
 export const deleteUser = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/users/${id}`, {
+    const response = await fetch(`${API_URL}/users/${id}`, {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json'
@@ -908,7 +923,7 @@ export const deleteUser = async (id) => {
 
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch('http://localhost:8000/api/login', {
+    const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -946,7 +961,7 @@ export const loginUser = async (username, password) => {
 
 export const logoutUser = async () => {
   try {
-    await fetch('http://localhost:8000/api/logout', {
+    await fetch(`${API_URL}/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -973,7 +988,7 @@ export const logoutUser = async () => {
 
 export const updateProfile = async (name, role) => {
   try {
-    const response = await fetch('http://localhost:8000/api/update-profile', {
+    const response = await fetch(`${API_URL}/update-profile`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -998,7 +1013,7 @@ export const updateProfile = async (name, role) => {
 
 export const updatePassword = async (currentPassword, newPassword) => {
   try {
-    const response = await fetch('http://localhost:8000/api/change-password', {
+    const response = await fetch(`${API_URL}/change-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1021,7 +1036,7 @@ export const updatePassword = async (currentPassword, newPassword) => {
 
 export const fetchSchedules = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/schedules', {
+    const response = await fetch(`${API_URL}/schedules`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -1035,7 +1050,7 @@ export const fetchSchedules = async () => {
 
 export const saveSchedule = async (user_id, hari, shift = '', keterangan = '') => {
   try {
-    const response = await fetch('http://localhost:8000/api/schedules', {
+    const response = await fetch(`${API_URL}/schedules`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1065,7 +1080,7 @@ export const saveSchedule = async (user_id, hari, shift = '', keterangan = '') =
 
 export const deleteSchedule = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/schedules/${id}`, {
+    const response = await fetch(`${API_URL}/schedules/${id}`, {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json'
@@ -1091,7 +1106,7 @@ export const deleteSchedule = async (id) => {
 
 export const fetchPresensi = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/presensi', {
+    const response = await fetch(`${API_URL}/presensi`, {
       credentials: 'include'
     })
     const resData = await response.json()
@@ -1110,7 +1125,7 @@ export const fetchPresensi = async () => {
 
 export const submitPresensi = async (foto) => {
   try {
-    const response = await fetch('http://localhost:8000/api/presensi', {
+    const response = await fetch(`${API_URL}/presensi`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

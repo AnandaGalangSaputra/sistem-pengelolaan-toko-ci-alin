@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { state, fetchSchedules, saveSchedule, deleteSchedule, fetchPresensi, submitPresensi } from '../store/store.js'
+import { state, fetchSchedules, saveSchedule, deleteSchedule, fetchPresensi, submitPresensi, APP_BASE_URL } from '../store/store.js'
 
 // Active Tab: 'jadwal' or 'presensi'
 const activeTab = ref('jadwal')
@@ -350,7 +350,7 @@ const formatDate = (dateStr) => {
 
 const getBackendImageUrl = (path) => {
   if (!path) return ''
-  return `http://localhost:8000/${path}`
+  return `${APP_BASE_URL}/${path}`
 }
 
 const viewFullPhoto = (url) => {

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { loginUser } from '../store/store.js'
+import { loginUser, API_URL } from '../store/store.js'
 import WhatsappButton from '../components/WhatsappButton.vue'
 
 const router = useRouter()
@@ -25,7 +25,7 @@ const isRegistering = ref(false)
 // Check if users table is empty on mount
 const checkDbState = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/check-empty-db')
+    const response = await fetch(`${API_URL}/check-empty-db`)
     const resData = await response.json()
     if (resData.success) {
       isDbEmpty.value = resData.empty
@@ -79,7 +79,7 @@ const handleRegisterOwner = async () => {
 
   isRegistering.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/register-first-owner', {
+    const response = await fetch(`${API_URL}/register-first-owner`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,0 +1,1 @@
+var e=``+new URL(`Asset 7-k3fU-utL.svg`,import.meta.url).href;export{e as t};

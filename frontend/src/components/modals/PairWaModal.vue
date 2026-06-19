@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
-import { checkWhatsappStatus } from '../../store/store.js'
+import { checkWhatsappStatus, API_URL } from '../../store/store.js'
 
 const props = defineProps({
   show: Boolean
@@ -26,7 +26,7 @@ const startPolling = () => {
     status.value = currentStatus
 
     if (currentStatus === 'CONNECTED') {
-      const response = await fetch('http://localhost:8000/api/whatsapp/status', { credentials: 'include' })
+      const response = await fetch(`${API_URL}/whatsapp/status`, { credentials: 'include' })
       const resData = await response.json()
       emit('confirm', resData.number || '+62 8xx')
       handleClose()
@@ -36,7 +36,7 @@ const startPolling = () => {
     if (currentStatus === 'QR_CODE') {
       // Fetch QR image
       try {
-        const response = await fetch('http://localhost:8000/api/whatsapp/qr', { credentials: 'include' })
+        const response = await fetch(`${API_URL}/whatsapp/qr`, { credentials: 'include' })
         const resData = await response.json()
         if (resData.success && resData.qr) {
           qrImage.value = resData.qr

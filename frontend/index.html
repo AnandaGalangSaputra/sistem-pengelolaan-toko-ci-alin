@@ -2,6 +2,23 @@
 <html lang="id">
 
 <head>
+  <script>
+    (function() {
+      var path = window.location.pathname;
+      var routes = ['/dashboard-karyawan', '/login', '/dashboard-owner'];
+      var basePath = '/';
+      for (var i = 0; i < routes.length; i++) {
+        var idx = path.indexOf(routes[i]);
+        if (idx !== -1) {
+          basePath = path.substring(0, idx) + '/';
+          break;
+        }
+      }
+      var baseEl = document.createElement('base');
+      baseEl.href = basePath;
+      document.head.appendChild(baseEl);
+    })();
+  </script>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="./src/assets/Asset 7.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
